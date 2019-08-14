@@ -748,6 +748,7 @@ func (sm *SyncManager) handleBlockchainEvents(event *events.Event) {
 		// Don't relay if we are not current. Other peers that are
 		// current should already know about it.
 		if !sm.current() {
+			log.Info("###### ETBlockConfirmAccepted not sync finished")
 			return
 		}
 
@@ -760,7 +761,9 @@ func (sm *SyncManager) handleBlockchainEvents(event *events.Event) {
 		// Generate the inventory vector and relay it.
 		blockHash := block.Hash()
 		iv := msg.NewInvVect(msg.InvTypeConfirmedBlock, &blockHash)
+		log.Info("###### ETBlockConfirmAccepted RelayInventory start")
 		sm.peerNotifier.RelayInventory(iv, block.Header)
+		log.Info("###### ETBlockConfirmAccepted RelayInventory end")
 
 		// A block has been connected to the main block chain.
 	case events.ETBlockConnected:

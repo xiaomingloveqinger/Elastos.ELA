@@ -84,25 +84,45 @@ func (n *network) Start() {
 		for {
 			select {
 			case msgItem := <-n.messageQueue:
+				log.Info("#### processMessage start", msgItem.Message.CMD())
 				n.processMessage(msgItem)
+				log.Info("#### processMessage end", msgItem.Message.CMD())
 			case <-n.changeViewChan:
+				log.Info("#### changeView start")
 				n.changeView()
+				log.Info("#### changeView end")
 			case <-n.badNetworkChan:
+				log.Info("#### badNetworkChan start")
 				n.badNetwork()
+				log.Info("#### badNetworkChan end")
 			case <-n.recoverChan:
+				log.Info("#### recover start")
 				n.recover()
+				log.Info("#### recover end")
 			case <-n.recoverTimeoutChan:
+				log.Info("#### recoverTimeout start")
 				n.recoverTimeout()
+				log.Info("#### recoverTimeout end")
 			case blockItem := <-n.blockReceivedChan:
+				log.Info("#### blockItem start")
 				n.blockReceived(blockItem.Block, blockItem.Confirmed)
+				log.Info("#### blockItem end")
 			case confirmInfo := <-n.confirmReceivedChan:
+				log.Info("#### confirmReceived start")
 				n.confirmReceived(confirmInfo.Confirm, confirmInfo.Height)
+				log.Info("#### confirmReceived end")
 			case evidence := <-n.illegalBlocksEvidence:
+				log.Info("#### illegalBlocksReceived start")
 				n.illegalBlocksReceived(evidence)
+				log.Info("#### illegalBlocksReceived end")
 			case evidence := <-n.inactiveArbiters:
+				log.Info("#### inactiveArbitersAccepeted start")
 				n.inactiveArbitersAccepeted(evidence)
+				log.Info("#### inactiveArbitersAccepeted end")
 			case sidechainEvidence := <-n.sidechainIllegalEvidence:
+				log.Info("#### sidechainIllegalEvidenceReceived start")
 				n.sidechainIllegalEvidenceReceived(sidechainEvidence)
+				log.Info("#### sidechainIllegalEvidenceReceived end")
 			case <-n.quit:
 				break out
 			}

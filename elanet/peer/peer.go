@@ -402,7 +402,9 @@ out:
 				case msg.InvTypeConfirmedBlock:
 					invMsg := msg.NewInvSize(1)
 					invMsg.AddInvVect(iv)
+					log.Info("@@@ relayHandler QueueMessage InvTypeConfirmedBlock start")
 					p.QueueMessage(invMsg, nil)
+					log.Info("@@@ relayHandler QueueMessage InvTypeConfirmedBlock end")
 
 				default:
 					invSendQueue.PushBack(iv)
@@ -468,7 +470,9 @@ cleanup:
 func (p *Peer) QueueInventory(invVect *msg.InvVect) {
 	// Don't add the inventory to the send queue if the peer is already
 	// known to have it.
+	log.Info("@@@ QueueInventory start")
 	if p.knownInventory.Exists(invVect) {
+		log.Info("@@@ QueueInventory end exist known")
 		return
 	}
 
@@ -476,10 +480,13 @@ func (p *Peer) QueueInventory(invVect *msg.InvVect) {
 	// we will be sending to hangs around until it knows for a fact that
 	// it is marked as disconnected and *then* it drains the channels.
 	if !p.Connected() {
+		log.Info("@@@ QueueInventory end not connected")
 		return
 	}
 
+	log.Info("@@@ QueueInventory outputInvChan <- invVect start")
 	p.outputInvChan <- invVect
+	log.Info("@@@ QueueInventory outputInvChan <- invVect end")
 }
 
 // start begins processing input and output messages.

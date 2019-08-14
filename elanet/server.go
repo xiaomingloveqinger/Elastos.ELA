@@ -747,7 +747,11 @@ func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *common.Uint256,
 // known to have it.  It is invoked from the peerHandler goroutine.
 func (s *server) handleRelayInvMsg(peers map[svr.IPeer]*serverPeer, rmsg relayMsg) {
 	// TODO remove after main net growth higher than H1 for efficiency.
+	log.Info("@@@ handleRelayInvMsg start")
+	defer log.Info("@@@ handleRelayInvMsg end")
 	current := s.chain.GetHeight()
+
+	log.Info("@@@ handleRelayInvMsg current:", current)
 
 	for _, sp := range peers {
 		if !sp.Connected() {
@@ -780,6 +784,7 @@ func (s *server) handleRelayInvMsg(peers map[svr.IPeer]*serverPeer, rmsg relayMs
 		case msg.InvTypeBlock:
 			fallthrough
 		case msg.InvTypeConfirmedBlock:
+			log.Info("@@@ handleRelayInvMsg type confirmedBlock")
 			// Compatible for old version SPV client.
 			if sp.filter.IsLoaded() {
 				// Do not send unconfirmed block to SPV client after H1.
@@ -792,7 +797,9 @@ func (s *server) handleRelayInvMsg(peers map[svr.IPeer]*serverPeer, rmsg relayMs
 				invVect := *rmsg.invVect
 				invVect.Type = msg.InvTypeBlock
 
+				log.Info("@@@ handleRelayInvMsg QueueInventory start")
 				sp.QueueInventory(&invVect)
+				log.Info("@@@ handleRelayInvMsg QueueInventory end")
 				continue
 			}
 		}
@@ -800,7 +807,9 @@ func (s *server) handleRelayInvMsg(peers map[svr.IPeer]*serverPeer, rmsg relayMs
 		// Queue the inventory to be relayed with the next batch.
 		// It will be ignored if the peer is already known to
 		// have the inventory.
+		log.Info("@@@ handleRelayInvMsg QueueInventory2 start")
 		sp.QueueInventory(rmsg.invVect)
+		log.Info("@@@ handleRelayInvMsg QueueInventory2 end")
 	}
 }
 
@@ -914,7 +923,9 @@ func (s *server) DonePeer(p svr.IPeer) {
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
 func (s *server) RelayInventory(invVect *msg.InvVect, data interface{}) {
+	log.Info("@@@ RelayInventory start")
 	s.relayInv <- relayMsg{invVect: invVect, data: data}
+	log.Info("@@@ RelayInventory end")
 }
 
 // IsCurrent returns whether or not the sync manager believes it is synced with
