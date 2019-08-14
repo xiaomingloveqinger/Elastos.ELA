@@ -305,6 +305,7 @@ func (s *server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
 		groups[sp.PID()] = sp
 	})
 
+	log.Info("### handleBroadcastMsg send")
 	for _, sp := range groups {
 		sp.QueueMessage(bmsg.message, nil)
 	}
@@ -342,6 +343,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// in connect list, and disconnect peers not in connect list.
 
 		// connectPeers saves the new received connect peer addresses.
+		log.Info("### handleQuery connectPeersMsg")
 		connectPeers := make(map[peer.PID]struct{})
 
 		// Loop through the new received connect peer addresses.
@@ -399,6 +401,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// we just pick the first matched peer to send the message, if
 		// something goes wrong, we try next. If all attempts are failed
 		// return an send message failed error.
+		log.Info("### handleQuery sendToPeerMsg")
 		sent := false
 		done := make(chan error, 1)
 		state.forAllPeers(func(sp *serverPeer) {
@@ -417,6 +420,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		}
 
 	case getConnCountMsg:
+		log.Info("### handleQuery getConnCountMsg")
 		connected := int32(0)
 		state.forAllPeers(func(sp *serverPeer) {
 			if sp.Connected() {
@@ -426,6 +430,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		msg.reply <- connected
 
 	case getPeersMsg:
+		log.Info("### handleQuery getPeersMsg")
 		peers := make([]*serverPeer, 0, state.Count())
 		state.forAllPeers(func(sp *serverPeer) {
 			if !sp.Connected() {
@@ -447,6 +452,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// through outbound peers list, inbound peers list and connect peers
 		// list, these are high cost operations.  So this method should not be
 		// called frequently.
+		log.Info("### handleQuery dumpPeersInfoMsg")
 		peers := make(map[peer.PID]*PeerInfo)
 		for _, sp := range state.outboundPeers {
 			peers[sp.PID()] = &PeerInfo{
@@ -604,21 +610,29 @@ out:
 		select {
 		// Deal with peer messages.
 		case pmsg := <-s.peerQueue:
+			log.Info("### handlePeerMsg start")
 			s.handlePeerMsg(state, pmsg)
+			log.Info("### handlePeerMsg end")
 
 			// Message to broadcast to all connected peers except those
 			// which are excluded by the message.
 		case bmsg := <-s.broadcast:
+			log.Info("### handleBroadcastMsg start")
 			s.handleBroadcastMsg(state, &bmsg)
+			log.Info("### handleBroadcastMsg end")
 
 		case qmsg := <-s.query:
+			log.Info("### handleQuery start")
 			s.handleQuery(state, qmsg)
+			log.Info("### handleQuery end")
 
 		case <-s.quit:
 			// Disconnect all peers on server shutdown.
+			log.Info("### forAllPeers start")
 			state.forAllPeers(func(sp *serverPeer) {
 				sp.Disconnect()
 			})
+			log.Info("### forAllPeers end")
 			break out
 		}
 	}
@@ -645,13 +659,16 @@ cleanup:
 func (s *server) handlePeerMsg(state *peerState, msg interface{}) {
 	switch msg := msg.(type) {
 	case newPeerMsg:
+		log.Info("### handlePeerMsg new peer:", msg.sp.String())
 		s.handleAddPeerMsg(state, msg.sp)
+		log.Info("### handlePeerMsg new peer end")
 		msg.reply <- struct{}{}
 
 	case donePeerMsg:
+		log.Info("### handlePeerMsg done peer:", msg.sp.String())
 		s.handleDonePeerMsg(state, msg.sp)
+		log.Info("### handlePeerMsg done peer end")
 		msg.reply <- struct{}{}
-
 	}
 }
 

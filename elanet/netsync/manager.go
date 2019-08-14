@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2019 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package netsync
 
@@ -729,9 +729,11 @@ func (sm *SyncManager) handleBlockchainEvents(event *events.Event) {
 	case events.ETBlockAccepted:
 		// Don't relay if we are not current. Other peers that are
 		// current should already know about it.
+		log.Info("### ETBlockAccepted start")
 		if !sm.current() {
 			return
 		}
+		log.Info("### ETBlockAccepted current end")
 
 		block, ok := event.Data.(*types.Block)
 		if !ok {
@@ -747,9 +749,11 @@ func (sm *SyncManager) handleBlockchainEvents(event *events.Event) {
 	case events.ETBlockConfirmAccepted:
 		// Don't relay if we are not current. Other peers that are
 		// current should already know about it.
+		log.Info("### ETBlockConfirmAccepted start")
 		if !sm.current() {
 			return
 		}
+		log.Info("### ETBlockConfirmAccepted current end")
 
 		block, ok := event.Data.(*types.Block)
 		if !ok {

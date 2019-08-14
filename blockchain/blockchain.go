@@ -438,6 +438,9 @@ type OrphanBlock struct {
 }
 
 func (b *BlockChain) ProcessOrphans(hash *Uint256) error {
+	log.Info("##### ProcessOrphans start")
+	defer log.Info("##### ProcessOrphans end")
+
 	processHashes := make([]*Uint256, 0, 10)
 	processHashes = append(processHashes, hash)
 	for len(processHashes) > 0 {
@@ -1108,6 +1111,8 @@ func (b *BlockChain) BlockExists(hash *Uint256) bool {
 }
 
 func (b *BlockChain) maybeAcceptBlock(block *Block, confirm *payload.Confirm) (bool, error) {
+	log.Info("##### maybeAcceptBlock start, ", block.Height)
+	defer log.Info("##### maybeAcceptBlock end, ", block.Height)
 	// Get a block node for the block previous to this one.  Will be nil
 	// if this is the genesis block.
 	prevNode, err := b.getPrevNodeFromBlock(block)
@@ -1166,20 +1171,25 @@ func (b *BlockChain) maybeAcceptBlock(block *Block, confirm *payload.Confirm) (b
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
 	if block.Height >= b.chainParams.CRCOnlyDPOSHeight {
+		log.Info("##### ETBlockConfirmAccepted, ", block.Height)
 		events.Notify(events.ETBlockConfirmAccepted, block)
 	} else if block.Height == b.chainParams.CRCOnlyDPOSHeight-1 {
+		log.Info("##### ETNewBlockReceived, ", block.Height)
 		events.Notify(events.ETNewBlockReceived, &DposBlock{
 			Block:       block,
 			HaveConfirm: true,
 		})
 		events.Notify(events.ETBlockAccepted, block)
 	} else {
+		log.Info("##### ETBlockAccepted, ", block.Height)
 		events.Notify(events.ETBlockAccepted, block)
 	}
 	return inMainChain, nil
 }
 
 func (b *BlockChain) connectBestChain(node *BlockNode, block *Block, confirm *payload.Confirm) (bool, bool, error) {
+	log.Info("##### connectBestChain start, ", block.Height)
+	defer log.Info("##### connectBestChain end, ", block.Height)
 	// We haven't selected a best chain yet or we are extending the main
 	// (best) chain with a new block.  This is the most common case.
 
@@ -1316,6 +1326,9 @@ func (b *BlockChain) ReorganizeChain(block *Block) error {
 //2. isOphan
 //3. error
 func (b *BlockChain) processBlock(block *Block, confirm *payload.Confirm) (bool, bool, error) {
+	log.Info("##### processBlock start, ", block.Height)
+	defer log.Info("##### processBlock end, ", block.Height)
+
 	blockHash := block.Hash()
 	log.Debugf("[ProcessBLock] height = %d, hash = %x", block.Header.Height, blockHash.Bytes())
 
