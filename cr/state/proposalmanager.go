@@ -164,7 +164,7 @@ func (p *ProposalManager) updateProposals(height uint32,
 		switch v.Status {
 		case Registered:
 			if !inElectionPeriod {
-				p.abortProposal(v, height)
+				p.abortOrTerminatedProposal(v, height, Aborted)
 				unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
 				break
 			}
@@ -175,13 +175,19 @@ func (p *ProposalManager) updateProposals(height uint32,
 			}
 		case CRAgreed:
 			if !inElectionPeriod {
-				p.abortProposal(v, height)
+				p.abortOrTerminatedProposal(v, height, Aborted)
 				unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
 				break
 			}
 			if p.shouldEndPublicVote(v.VoteStartHeight, height) {
 				if p.transferCRAgreedState(v, height, circulation) == VoterCanceled {
 					unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
+				}
+				// terminate closed proposal
+				if v.Proposal.ProposalType == payload.CloseProposal {
+					closeProposal := p.Proposals[v.Proposal.CloseProposalHash]
+					p.abortOrTerminatedProposal(closeProposal, height, Terminated)
+					unusedAmount += getProposalTotalBudgetAmount(closeProposal.Proposal)
 				}
 			}
 		}
@@ -191,15 +197,15 @@ func (p *ProposalManager) updateProposals(height uint32,
 }
 
 // abortProposal will transfer the status to aborted.
-func (p *ProposalManager) abortProposal(proposalState *ProposalState,
-	height uint32) {
+func (p *ProposalManager) abortOrTerminatedProposal(proposalState *ProposalState,
+	height uint32, resetStatus ProposalStatus) {
 	oriStatus := proposalState.Status
 	oriBudgetsStatus := make(map[uint8]BudgetStatus)
 	for k, v := range proposalState.BudgetsStatus {
 		oriBudgetsStatus[k] = v
 	}
 	p.history.Append(height, func() {
-		proposalState.Status = Aborted
+		proposalState.Status = resetStatus
 		for k, _ := range proposalState.BudgetsStatus {
 			proposalState.BudgetsStatus[k] = Closed
 		}

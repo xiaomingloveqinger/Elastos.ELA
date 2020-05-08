@@ -123,6 +123,9 @@ type CRCProposal struct {
 	// The specified ELA address where the funds are to be sent.
 	Recipient common.Uint168
 
+	// To be closed proposal hash, this field will be used when the proposal type is CloseProposal
+	CloseProposalHash common.Uint256
+
 	// The signature of proposal's owner.
 	Signature []byte
 
@@ -167,14 +170,22 @@ func (p *CRCProposal) SerializeUnsigned(w io.Writer, version byte) error {
 		return errors.New("failed to serialize Budgets")
 	}
 
-	for _, v := range p.Budgets {
-		if err := v.Serialize(w); err != nil {
-			return errors.New("failed to serialize Budgets")
+	if p.ProposalType != CloseProposal {
+		for _, v := range p.Budgets {
+			if err := v.Serialize(w); err != nil {
+				return errors.New("failed to serialize Budgets")
+			}
+		}
+
+		if err := p.Recipient.Serialize(w); err != nil {
+			return errors.New("failed to serialize Recipient")
 		}
 	}
 
-	if err := p.Recipient.Serialize(w); err != nil {
-		return errors.New("failed to serialize Recipient")
+	if p.ProposalType == CloseProposal {
+		if err := p.CloseProposalHash.Serialize(w); err != nil {
+			return errors.New("failed to serialize CloseProposalHash")
+		}
 	}
 
 	return nil
@@ -237,21 +248,29 @@ func (p *CRCProposal) DeserializeUnSigned(r io.Reader, version byte) error {
 		return errors.New("failed to deserialize DraftHash")
 	}
 
-	var count uint64
-	if count, err = common.ReadVarUint(r, 0); err != nil {
-		return errors.New("failed to deserialize Budgets")
-	}
-	p.Budgets = make([]Budget, 0)
-	for i := 0; i < int(count); i++ {
-		var budget Budget
-		if err := budget.Deserialize(r); err != nil {
+	if p.ProposalType != CloseProposal {
+		var count uint64
+		if count, err = common.ReadVarUint(r, 0); err != nil {
 			return errors.New("failed to deserialize Budgets")
 		}
-		p.Budgets = append(p.Budgets, budget)
+		p.Budgets = make([]Budget, 0)
+		for i := 0; i < int(count); i++ {
+			var budget Budget
+			if err := budget.Deserialize(r); err != nil {
+				return errors.New("failed to deserialize Budgets")
+			}
+			p.Budgets = append(p.Budgets, budget)
+		}
+
+		if err = p.Recipient.Deserialize(r); err != nil {
+			return errors.New("failed to deserialize Recipient")
+		}
 	}
 
-	if err = p.Recipient.Deserialize(r); err != nil {
-		return errors.New("failed to deserialize Recipient")
+	if p.ProposalType == CloseProposal {
+		if err = p.CloseProposalHash.Deserialize(r); err != nil {
+			return errors.New("failed to deserialize CloseProposalHash")
+		}
 	}
 
 	return nil
