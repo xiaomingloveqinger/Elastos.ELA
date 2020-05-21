@@ -186,6 +186,11 @@ func (a *arbitrators) CheckCRCAppropriationTx(block *types.Block) error {
 	return nil
 }
 
+func (a *arbitrators) CheckCRCMergeUTXOTx(block *types.Block) error {
+	// TODO to be finished
+	return nil
+}
+
 func (a *arbitrators) ProcessSpecialTxPayload(p types.Payload,
 	height uint32) error {
 	switch obj := p.(type) {

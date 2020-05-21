@@ -120,6 +120,12 @@ func (c *Committee) IsAppropriationNeeded() bool {
 	return c.NeedAppropriation
 }
 
+func (c *Committee) IsMergeUTXONeeded() bool {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
+	return c.NeedMergeUTXO
+}
+
 func (c *Committee) GetMembersDIDs() []common.Uint168 {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
@@ -282,6 +288,10 @@ func (c *Committee) ProcessBlock(block *types.Block, confirm *payload.Confirm) {
 		c.createAppropriationTransaction(block.Height)
 		c.needAppropriationHistory.Commit(block.Height)
 	}
+
+	if c.shouldMergeUTXO(block.Height) {
+		//TODO createMergeTransaction
+	}
 }
 
 func (c *Committee) updateProposals(height uint32, inElectionPeriod bool) {
@@ -347,6 +357,10 @@ func (c *Committee) createAppropriationTransaction(height uint32) {
 			}()
 		}
 	}
+}
+
+func (c *Committee) createCRCMergeUTXOTransaction(height uint32) {
+	// TODO to be finished
 }
 
 func (c *Committee) resetCRCCommitteeUsedAmount(height uint32) {
@@ -538,6 +552,14 @@ func (c *Committee) processCRCAppropriation(height uint32, history *utils.Histor
 	})
 }
 
+func (c *Committee) processCRCMergeUTXO(height uint32, history *utils.History) {
+	history.Append(height, func() {
+		c.NeedMergeUTXO = false
+	}, func() {
+		c.NeedMergeUTXO = true
+	})
+}
+
 func (c *Committee) GetDepositAmountByPublicKey(
 	publicKey string) (common.Fixed64, common.Fixed64, error) {
 	c.mtx.RLock()
@@ -623,6 +645,18 @@ func (c *Committee) shouldChange(height uint32) bool {
 	}
 
 	return height == c.LastVotingStartHeight+c.params.CRVotingPeriod
+}
+
+func (c *Committee) shouldMergeUTXO(height uint32) bool {
+	if height < c.params.CRCMergeUTXOHeight {
+		return false
+	}
+	utxos, err := c.getUTXO(&c.params.CRCFoundation)
+	if err != nil {
+		log.Error("getUTXO from CRCFoundation failed", err.Error())
+		return false
+	}
+	return uint32(len(utxos)) > c.params.CRCMergeUTXOReachLimit
 }
 
 func (c *Committee) hasAppropriationTx(block *types.Block) bool {

@@ -200,6 +200,9 @@ var DefaultParams = Params{
 	ProposalCRVotingPeriod:      7 * 720,
 	ProposalPublicVotingPeriod:  7 * 720,
 	CRAgreementCount:            8,
+	CRCMergeUTXOHeight:          700000,
+	CRCMergeUTXOReachLimit:      5000,
+	CRCMergeUTXOBatchCount:      3000,
 	VoterRejectPercentage:       10,
 	CRCAppropriatePercentage:    10,
 	MaxCommitteeProposalCount:   128,
@@ -530,6 +533,18 @@ type Params struct {
 	// CRAgreementCount defines minimum count to let a registered proposal
 	// transfer to CRAgreed state.
 	CRAgreementCount uint32
+
+	// CRCMergeUTXOHeight defines the height to support merge utxo of
+	// CRFoundationAddress
+	CRCMergeUTXOHeight uint32
+
+	// CRCMergeUTXOCount defines the number of utxo which will trigger
+	// the MergeUTXO transaction
+	CRCMergeUTXOReachLimit uint32
+
+	// CRCMergeUTXOCount defines the number of utxo which will be merged
+	// in one batch
+	CRCMergeUTXOBatchCount uint32
 
 	// VoterRejectPercentage defines percentage about voters reject a proposal.
 	VoterRejectPercentage float64

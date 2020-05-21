@@ -115,6 +115,9 @@ type CRConfiguration struct {
 	SecretaryGeneral           string  `json:"SecretaryGeneral"`
 	MaxProposalTrackingCount   uint8   `json:"MaxProposalTrackingCount"`
 	RegisterCRByDIDHeight      uint32  `json:"RegisterCRByDIDHeight"`
+	CRCMergeUTXOHeight         uint32  `json:"CRCMergeUTXOHeight"`
+	CRCMergeUTXOReachLimit     uint32  `json:"CRCMergeUTXOReachLimit"`
+	CRCMergeUTXOBatchCount     uint32  `json:"CRCMergeUTXOBatchCount"`
 }
 
 type RPCServiceLevel byte

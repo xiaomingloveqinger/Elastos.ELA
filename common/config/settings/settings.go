@@ -823,6 +823,24 @@ func NewSettings() *Settings {
 		ParamName:    "MaxProposalTrackingCount"})
 
 	result.Add(&settingItem{
+		Flag:         cmdcom.CRCMergeUTXOHeight,
+		DefaultValue: uint8(0),
+		ConfigPath:   "CRConfiguration.CRCMergeUTXOHeight",
+		ParamName:    "CRCMergeUTXOHeight"})
+
+	result.Add(&settingItem{
+		Flag:         cmdcom.CRCMergeUTXOReachLimit,
+		DefaultValue: uint8(0),
+		ConfigPath:   "CRConfiguration.CRCMergeUTXOReachLimit",
+		ParamName:    "CRCMergeUTXOReachLimit"})
+
+	result.Add(&settingItem{
+		Flag:         cmdcom.CRCMergeUTXOBatchCount,
+		DefaultValue: uint8(0),
+		ConfigPath:   "CRConfiguration.CRCMergeUTXOBatchCount",
+		ParamName:    "CRCMergeUTXOBatchCount"})
+
+	result.Add(&settingItem{
 		Flag:         nil,
 		DefaultValue: "",
 		ConfigPath:   "RPCServiceLevel",

@@ -59,6 +59,7 @@ const (
 	CRCProposalTracking TxType = 0x27
 	CRCAppropriation    TxType = 0x28
 	CRCProposalWithdraw TxType = 0x29
+	CRCMergeUTXO        TxType = 0x30
 )
 
 func (self TxType) Name() string {
@@ -121,6 +122,8 @@ func (self TxType) Name() string {
 		return "CRCProposalTracking"
 	case CRCAppropriation:
 		return "CRCAppropriation"
+	case CRCMergeUTXO:
+		return "CRCMergeUTXO"
 	default:
 		return "Unknown"
 	}
@@ -360,6 +363,10 @@ func (tx *Transaction) Hash() common.Uint256 {
 	return *tx.txHash
 }
 
+func (tx *Transaction) IsCRCMergeUTXOTx() bool {
+	return tx.TxType == CRCMergeUTXO
+}
+
 func (tx *Transaction) IsCRCAppropriationTx() bool {
 	return tx.TxType == CRCAppropriation
 }
@@ -544,6 +551,8 @@ func GetPayload(txType TxType) (Payload, error) {
 		p = new(payload.CRCProposalTracking)
 	case CRCAppropriation:
 		p = new(payload.CRCAppropriation)
+	case CRCMergeUTXO:
+		p = new(payload.CRCMergeUTXO)
 	default:
 		return nil, errors.New("[Transaction], invalid transaction type.")
 	}

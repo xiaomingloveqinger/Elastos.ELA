@@ -98,6 +98,7 @@ type KeyFrame struct {
 	LastVotingStartHeight  uint32
 	InElectionPeriod       bool
 	NeedAppropriation      bool
+	NeedMergeUTXO		   bool
 	CRCFoundationBalance   common.Fixed64
 	CRCCommitteeBalance    common.Fixed64
 	CRCCommitteeUsedAmount common.Fixed64
@@ -243,7 +244,7 @@ func (kf *KeyFrame) Serialize(w io.Writer) (err error) {
 	}
 
 	return common.WriteElements(w, kf.LastCommitteeHeight,
-		kf.LastVotingStartHeight, kf.InElectionPeriod, kf.NeedAppropriation,
+		kf.LastVotingStartHeight, kf.InElectionPeriod, kf.NeedAppropriation,kf.NeedMergeUTXO,
 		kf.CRCFoundationBalance, kf.CRCCommitteeBalance, kf.CRCCommitteeUsedAmount,
 		kf.DestroyedAmount, kf.CirculationAmount)
 }
@@ -258,7 +259,7 @@ func (kf *KeyFrame) Deserialize(r io.Reader) (err error) {
 	}
 
 	err = common.ReadElements(r, &kf.LastCommitteeHeight,
-		&kf.LastVotingStartHeight, &kf.InElectionPeriod, &kf.NeedAppropriation,
+		&kf.LastVotingStartHeight, &kf.InElectionPeriod, &kf.NeedAppropriation,&kf.NeedMergeUTXO,
 		&kf.CRCFoundationBalance, &kf.CRCCommitteeBalance,
 		&kf.CRCCommitteeUsedAmount, &kf.DestroyedAmount, &kf.CirculationAmount)
 	return
@@ -349,6 +350,7 @@ func (kf *KeyFrame) Snapshot() *KeyFrame {
 	frame.LastVotingStartHeight = kf.LastVotingStartHeight
 	frame.InElectionPeriod = kf.InElectionPeriod
 	frame.NeedAppropriation = kf.NeedAppropriation
+	frame.NeedMergeUTXO = kf.NeedMergeUTXO
 	frame.CRCFoundationBalance = kf.CRCFoundationBalance
 	frame.CRCCommitteeBalance = kf.CRCCommitteeBalance
 	frame.CRCCommitteeUsedAmount = kf.CRCCommitteeUsedAmount

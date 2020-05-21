@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package common
 
@@ -270,6 +270,18 @@ var (
 	MaxProposalTrackingCountFlag = cli.StringFlag{
 		Name:  "maxproposaltrackingcount",
 		Usage: "defines the max count of CRC proposal tracking",
+	}
+	CRCMergeUTXOHeight = cli.StringFlag{
+		Name:  "crcmergeutxoheight",
+		Usage: "defines the height of crc merge utxo started",
+	}
+	CRCMergeUTXOReachLimit = cli.StringFlag{
+		Name:  "crcmergeutxoreachlimit",
+		Usage: "defines utxo limit when start create merge utxo transaction",
+	}
+	CRCMergeUTXOBatchCount = cli.StringFlag{
+		Name:  "crcmergeutxobatchcount",
+		Usage: "defines the number of utxo will be merged",
 	}
 	OriginArbitersFlag = cli.StringFlag{
 		Name:  "originarbiters",
