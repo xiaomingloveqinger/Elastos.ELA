@@ -40,6 +40,8 @@ const (
 
 	// irreversibleHeight defines the max height that the chain be reorganized
 	irreversibleHeight = 6
+
+	rectifyTxFee = 10000
 )
 
 var (
@@ -494,6 +496,9 @@ func (b *BlockChain) CreateCRAssetsRectifyTransaction() (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(utxos) < int(b.chainParams.MaxCRAssetsAddressUTXOCount) {
+		return nil, errors.New("Avaliable utxo is less than MaxCRAssetsAddressUTXOCount")
+	}
 	var crcFoundationBalance Fixed64
 	for i, u := range utxos {
 		if i >= int(b.chainParams.MaxCRAssetsAddressUTXOCount) {
@@ -501,7 +506,7 @@ func (b *BlockChain) CreateCRAssetsRectifyTransaction() (*Transaction, error) {
 		}
 		crcFoundationBalance += u.Value
 	}
-	rectifyAmount := crcFoundationBalance
+	rectifyAmount := crcFoundationBalance - rectifyTxFee
 
 	log.Info("create CR assets rectify amount:", rectifyAmount)
 	if rectifyAmount <= 0 {
@@ -512,7 +517,7 @@ func (b *BlockChain) CreateCRAssetsRectifyTransaction() (*Transaction, error) {
 
 	var tx *Transaction
 	tx, err = b.createTransaction(&payload.CRAssetsRectify{},
-		b.chainParams.CRCFoundation, Fixed64(0), uint32(0), utxos, outputs...)
+		b.chainParams.CRCFoundation, Fixed64(rectifyTxFee), uint32(0), utxos, outputs...)
 	if err != nil {
 		return nil, err
 	}
