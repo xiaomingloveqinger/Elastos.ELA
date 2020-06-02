@@ -862,6 +862,12 @@ func NewSettings() *Settings {
 		ConfigPath:   "CRConfiguration.CRAssetsRectifyTransactionHeight",
 		ParamName:    "CRAssetsRectifyTransactionHeight"})
 
+	result.Add(&settingItem{
+		Flag:         cmdcom.CRCProposalWithdrawPayloadV1Height,
+		DefaultValue: uint32(0),
+		ConfigPath:   "CRConfiguration.CRCProposalWithdrawPayloadV1Height",
+		ParamName:    "CRCProposalWithdrawPayloadV1Height"})
+
 	return result
 }
 
