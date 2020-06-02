@@ -39,7 +39,9 @@ type Committee struct {
 	appendToTxpool                   func(transaction *types.Transaction) elaerr.ELAError
 	createCRCAppropriationTx         func() (*types.Transaction, error)
 	createCRAssetsRectifyTransaction func() (*types.Transaction, error)
-	getUTXO                          func(programHash *common.Uint168) ([]*types.UTXO, error)
+	createCRRealWithdrawTransaction  func(withdrawTransactionHashes []common.Uint256,
+		outputs []*types.OutputInfo) (*types.Transaction, error)
+	getUTXO func(programHash *common.Uint168) ([]*types.UTXO, error)
 }
 
 type CommitteeKeyFrame struct {
@@ -276,15 +278,22 @@ func (c *Committee) ProcessBlock(block *types.Block, confirm *payload.Confirm) {
 	}
 	c.lastHistory.Commit(block.Height)
 
+	if block.Height >= c.params.CRAssetsRectifyTransactionHeight &&
+		len(c.manager.WithdrawableTxInfo) != 0 {
+		c.createRealWithdrawTransaction(block.Height)
+	}
+
 	if needChg {
 		c.createAppropriationTransaction(block.Height)
 		c.recordCurrentStageAmount(block.Height)
 		c.appropriationHistory.Commit(block.Height)
 	} else {
-		if c.CRAssetsAddressUTXOCount >= c.params.MaxCRAssetsAddressUTXOCount && block.Height >= c.params.CRAssetsRectifyTransactionHeight {
+		if c.CRAssetsAddressUTXOCount >= c.params.MaxCRAssetsAddressUTXOCount &&
+			block.Height >= c.params.CRAssetsRectifyTransactionHeight {
 			c.createRectifyCRAssetsTransaction(block.Height)
 		}
 	}
+
 }
 
 func (c *Committee) updateProposals(height uint32, inElectionPeriod bool) {
@@ -395,7 +404,7 @@ func (c *Committee) createAppropriationTransaction(height uint32) {
 }
 
 func (c *Committee) createRectifyCRAssetsTransaction(height uint32) {
-	if c.createCRCAppropriationTx != nil && height == c.getHeight() {
+	if c.createCRAssetsRectifyTransaction != nil && height == c.getHeight() {
 		tx, err := c.createCRAssetsRectifyTransaction()
 		if err != nil {
 			log.Error("create rectify UTXOs tx failed:", err.Error())
@@ -411,6 +420,39 @@ func (c *Committee) createRectifyCRAssetsTransaction(height uint32) {
 						c.broadcast(msg.NewTx(tx))
 					} else {
 						log.Warn("create rectify UTXOs append to tx pool err ", err)
+					}
+				}
+			}()
+		}
+	}
+	return
+}
+
+func (c *Committee) createRealWithdrawTransaction(height uint32) {
+	if c.createCRRealWithdrawTransaction != nil && height == c.getHeight() {
+		withdrawTransactionHahses := make([]common.Uint256, 0)
+		ouputs := make([]*types.OutputInfo, 0)
+		for k, v := range c.manager.WithdrawableTxInfo {
+			withdrawTransactionHahses = append(withdrawTransactionHahses, k)
+			outputInfo := v
+			ouputs = append(ouputs, &outputInfo)
+		}
+		tx, err := c.createCRRealWithdrawTransaction(withdrawTransactionHahses, ouputs)
+		if err != nil {
+			log.Error("create real withdraw tx failed:", err.Error())
+			return
+		}
+
+		log.Info("create real withdraw transaction:", tx.Hash())
+		if c.isCurrent != nil && c.broadcast != nil && c.
+			appendToTxpool != nil {
+			go func() {
+				if c.isCurrent() {
+					if err := c.appendToTxpool(tx); err == nil {
+						c.broadcast(msg.NewTx(tx))
+					} else {
+						log.Warn("create real withdraw transaction "+
+							"append to tx pool err ", err)
 					}
 				}
 			}()
@@ -636,6 +678,23 @@ func (c *Committee) processCRCAppropriation(height uint32, history *utils.Histor
 		c.NeedAppropriation = false
 	}, func() {
 		c.NeedAppropriation = true
+	})
+}
+
+func (c *Committee) processCRCRealWithdraw(tx *types.Transaction,
+	height uint32, history *utils.History) {
+
+	txs := make(map[common.Uint256]types.OutputInfo)
+	for k, v := range c.manager.WithdrawableTxInfo {
+		txs[k] = v
+	}
+	withdrawPayload := tx.Payload.(*payload.CRCProposalRealWithdraw)
+	history.Append(height, func() {
+		for _, hash := range withdrawPayload.WithdrawTransactionHashes {
+			delete(c.manager.WithdrawableTxInfo, hash)
+		}
+	}, func() {
+		c.manager.WithdrawableTxInfo = txs
 	})
 }
 
@@ -1090,6 +1149,13 @@ func (c *Committee) GetProposalByDraftHash(draftHash common.Uint256) *ProposalSt
 	return c.manager.getProposalByDraftHash(draftHash)
 }
 
+func (c *Committee) GetRealWithdrawTransactions() map[common.Uint256]types.OutputInfo {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
+
+	return c.manager.WithdrawableTxInfo
+}
+
 // GetCandidateByID returns candidate with specified cid or did, it will return
 // nil if not found.
 func (c *Committee) GetCandidateByID(id common.Uint168) *Candidate {
@@ -1124,15 +1190,18 @@ type CommitteeFuncsConfig struct {
 	GetHeight                        func() uint32
 	CreateCRAppropriationTransaction func() (*types.Transaction, error)
 	CreateCRAssetsRectifyTransaction func() (*types.Transaction, error)
-	IsCurrent                        func() bool
-	Broadcast                        func(msg p2p.Message)
-	AppendToTxpool                   func(transaction *types.Transaction) elaerr.ELAError
-	GetUTXO                          func(programHash *common.Uint168) ([]*types.UTXO, error)
+	CreateCRRealWithdrawTransaction  func(withdrawTransactionHashes []common.Uint256,
+		outpus []*types.OutputInfo) (*types.Transaction, error)
+	IsCurrent      func() bool
+	Broadcast      func(msg p2p.Message)
+	AppendToTxpool func(transaction *types.Transaction) elaerr.ELAError
+	GetUTXO        func(programHash *common.Uint168) ([]*types.UTXO, error)
 }
 
 func (c *Committee) RegisterFuncitons(cfg *CommitteeFuncsConfig) {
 	c.createCRCAppropriationTx = cfg.CreateCRAppropriationTransaction
 	c.createCRAssetsRectifyTransaction = cfg.CreateCRAssetsRectifyTransaction
+	c.createCRRealWithdrawTransaction = cfg.CreateCRRealWithdrawTransaction
 	c.isCurrent = cfg.IsCurrent
 	c.broadcast = cfg.Broadcast
 	c.appendToTxpool = cfg.AppendToTxpool

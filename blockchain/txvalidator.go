@@ -273,12 +273,17 @@ func (b *BlockChain) CheckTransactionContext(blockHeight uint32,
 		}
 		return nil
 
+	case CRCProposalRealWithdraw:
+		if err := b.checkCRCProposalRealWithdrawTransaction(txn, references); err != nil {
+			log.Warn("[checkCRCProposalRealWithdrawTransaction],", err)
+			return elaerr.Simple(elaerr.ErrTxRealWithdraw, err)
+		}
+
 	case CRAssetsRectify:
 		if err := b.checkCRAssetsRectifyTransaction(txn, references); err != nil {
 			log.Warn("[checkCRAssetsRectifyTransaction],", err)
 			return elaerr.Simple(elaerr.ErrTxAssetsRectify, err)
 		}
-		return nil
 	}
 
 	if err := b.checkTransactionFee(txn, references); err != nil {
@@ -598,7 +603,7 @@ func (b *BlockChain) checkCRCProposalWithdrawOutput(txn *Transaction) error {
 
 	if txn.PayloadVersion == payload.CRCProposalWithdrawDefault {
 		//check output[0] must equal with Recipient
-		if txn.Outputs[0].ProgramHash != proposalState.Proposal.Recipient {
+		if txn.Outputs[0].ProgramHash != proposalState.Recipient {
 			return errors.New("txn.Outputs[0].ProgramHash != Recipient")
 		}
 		//check output[1] if exist must equal with CRCComitteeAddresss
@@ -613,7 +618,7 @@ func (b *BlockChain) checkCRCProposalWithdrawOutput(txn *Transaction) error {
 	} else if txn.PayloadVersion == payload.CRCProposalWithdrawVersion01 {
 
 		//check output[0] must equal with Recipient
-		if withdrawPayload.Recipient != proposalState.Proposal.Recipient {
+		if withdrawPayload.Recipient != proposalState.Recipient {
 			return errors.New("withdrawPayload.Recipient != Recipient")
 		}
 
@@ -1101,7 +1106,6 @@ func (b *BlockChain) checkTxHeightVersion(txn *Transaction, blockHeight uint32) 
 			return errors.New("not support before CRCommitteeStartHeight")
 		}
 		if txn.TxType == CRCProposalWithdraw {
-
 			if txn.PayloadVersion == payload.CRCProposalWithdrawDefault && blockHeight >= b.chainParams.CRCProposalWithdrawPayloadV1Height {
 				return errors.New("not support after CRCProposalWithdrawPayloadV1Height")
 			}
@@ -1110,7 +1114,7 @@ func (b *BlockChain) checkTxHeightVersion(txn *Transaction, blockHeight uint32) 
 				return errors.New("not support before CRCProposalWithdrawPayloadV1Height")
 			}
 		}
-	case CRAssetsRectify:
+	case CRAssetsRectify, CRCProposalRealWithdraw:
 		if blockHeight < b.chainParams.CRAssetsRectifyTransactionHeight {
 			return errors.New("not support before CRAssetsRectifyTransactionHeight")
 		}
@@ -1961,6 +1965,67 @@ func (b *BlockChain) checkCRCAppropriationTransaction(txn *Transaction,
 	return nil
 }
 
+func (b *BlockChain) checkCRCProposalRealWithdrawTransaction(txn *Transaction,
+	references map[*Input]Output) error {
+	crcRealWithdraw, ok := txn.Payload.(*payload.CRCProposalRealWithdraw)
+	if !ok {
+		return errors.New("invalid payload")
+	}
+	txsCount := len(crcRealWithdraw.WithdrawTransactionHashes)
+	// check WithdrawTransactionHashes count and output count
+	if txsCount != len(txn.Outputs) && txsCount != len(txn.Outputs)-1 {
+		return errors.New("invalid real withdraw transaction hashes count")
+	}
+
+	// if need change, the last output is only allowed to CRCCommitteeAddress.
+	if txsCount != len(txn.Outputs) {
+		toProgramHash := txn.Outputs[len(txn.Outputs)-1].ProgramHash
+		if !toProgramHash.IsEqual(b.chainParams.CRCCommitteeAddress) {
+			return errors.New(fmt.Sprintf("last output is invalid"))
+		}
+	}
+
+	// check other outputs, need to match with WithdrawTransactionHashes
+	txs := b.crCommittee.GetRealWithdrawTransactions()
+	txsMap := make(map[common.Uint256]struct{})
+	for i, hash := range crcRealWithdraw.WithdrawTransactionHashes {
+		txInfo, ok := txs[hash]
+		if !ok {
+			return errors.New("invalid withdraw transaction hash")
+		}
+		output := txn.Outputs[i]
+		if !output.ProgramHash.IsEqual(txInfo.Recipient) {
+			return errors.New("invalid real withdraw output address")
+		}
+		if output.Value != txInfo.Amount-RealWithdrawSingleFee {
+			return errors.New(fmt.Sprintf("invalid real withdraw output "+
+				"amount:%s, need to be:%s",
+				output.Value, txInfo.Amount-RealWithdrawSingleFee))
+		}
+		if _, ok := txsMap[hash]; ok {
+			return errors.New("duplicated real withdraw transactions hash")
+		}
+		txsMap[hash] = struct{}{}
+	}
+
+	// check transaction fee
+	var inputAmount common.Fixed64
+	for _, v := range references {
+		inputAmount += v.Value
+	}
+	var outputAmount common.Fixed64
+	for _, o := range txn.Outputs {
+		outputAmount += o.Value
+	}
+	if inputAmount-outputAmount != RealWithdrawSingleFee*common.Fixed64(txsCount) {
+		return errors.New(fmt.Sprintf("invalid real withdraw transaction"+
+			" fee:%s, need to be:%s, txsCount:%d", inputAmount-outputAmount,
+			RealWithdrawSingleFee*common.Fixed64(txsCount), txsCount))
+	}
+
+	return nil
+}
+
 func (b *BlockChain) checkCRAssetsRectifyTransaction(txn *Transaction,
 	references map[*Input]Output) error {
 	// Inputs count should be greater than or equal to MaxCRAssetsAddressUTXOCount
@@ -1990,8 +2055,8 @@ func (b *BlockChain) checkCRAssetsRectifyTransaction(txn *Transaction,
 
 	// Inputs amount need equal to outputs amount
 	totalOutput := txn.Outputs[0].Value
-	if totalInput != totalOutput {
-		return fmt.Errorf("inputs does not equal to outputs amount, "+
+	if totalInput != totalOutput+RectifyTxFee {
+		return fmt.Errorf("inputs minus outputs does not match with 10000 sela fee , "+
 			"inputs:%s outputs:%s", totalInput, totalOutput)
 	}
 
@@ -2240,6 +2305,47 @@ func (b *BlockChain) checkCRCProposalTransaction(txn *Transaction,
 		return errors.New("budgets exceeded the maximum limit")
 	}
 
+	if proposal.ProposalType == payload.ChangeProposalOwner {
+		proposalState := b.crCommittee.GetProposal(proposal.PreviousHash)
+		if proposalState == nil {
+			return errors.New("proposal doesn't exist")
+		}
+		if proposalState.Status != crstate.VoterAgreed {
+			return errors.New("proposal status is not VoterAgreed")
+		}
+
+		publicKey, err := crypto.DecodePoint(proposal.OwnerPublicKey)
+		if err != nil {
+			return errors.New("invalid owner")
+		}
+
+		newPublicKey, err := crypto.DecodePoint(proposal.NewOwnerPublicKey)
+		if err != nil {
+			return errors.New("invalid owner")
+		}
+
+		if newPublicKey == publicKey {
+			return errors.New("cr new did must be different from the previous one")
+		}
+
+		newCode, err := contract.CreateStandardRedeemScript(newPublicKey)
+		if err != nil {
+			return errors.New("invalid owner")
+		}
+		did, err := getDIDByCode(newCode)
+		if err != nil {
+			return errors.New("invalid owner code")
+		}
+		crMember := b.crCommittee.GetMember(*did)
+		if crMember == nil {
+			return errors.New("proposal sponsors must be members")
+		}
+
+		if crMember.MemberState != crstate.MemberElected {
+			return errors.New("cr members should be elected")
+		}
+	}
+
 	if proposal.ProposalType == payload.ELIP {
 		if len(proposal.Budgets) != ELIPBudgetsCount {
 			return errors.New("ELIP needs to have and only have two budget")
@@ -2408,6 +2514,17 @@ func (b *BlockChain) checkCRCProposalTransaction(txn *Transaction,
 	}
 
 	return nil
+}
+
+func getDIDByCode(code []byte) (*common.Uint168, error) {
+	didCode := make([]byte, len(code))
+	copy(didCode, code)
+	didCode = append(didCode[:len(code)-1], common.DID)
+	ct1, err := contract.CreateCRIDContractByCode(didCode)
+	if err != nil {
+		return nil, err
+	}
+	return ct1.ToProgramHash(), err
 }
 
 func getParameterBySignature(signature []byte) []byte {

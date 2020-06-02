@@ -70,7 +70,7 @@ func GetTransactionInfo(tx *Transaction) *TransactionInfo {
 		inputs[i].Sequence = v.Sequence
 	}
 
-	outputs := make([]OutputInfo, len(tx.Outputs))
+	outputs := make([]RpcOutputInfo, len(tx.Outputs))
 	for i, v := range tx.Outputs {
 		outputs[i].Value = v.Value.String()
 		outputs[i].Index = uint32(i)
@@ -1942,7 +1942,7 @@ func GetCRProposalState(param Params) map[string]interface{} {
 	}
 
 	var err error
-	rpcProposal.Recipient, err = proposalState.Proposal.Recipient.ToAddress()
+	rpcProposal.Recipient, err = proposalState.Recipient.ToAddress()
 	if err != nil {
 		return ResponsePack(InternalError, "invalidate Recipient")
 	}

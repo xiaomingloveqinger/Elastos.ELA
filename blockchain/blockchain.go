@@ -40,6 +40,12 @@ const (
 
 	// irreversibleHeight defines the max height that the chain be reorganized
 	irreversibleHeight = 6
+
+	// RectifyTxFee defines the fee of cr rectify transaction
+	RectifyTxFee = 10000
+
+	// RealWithdrawSingleFee defines the single fee of cr real proposal withdraw transaction
+	RealWithdrawSingleFee = 10000
 )
 
 var (
@@ -328,12 +334,7 @@ func (b *BlockChain) InitCheckpoint(interrupt <-chan struct{},
 	return err
 }
 
-type OutputInfo struct {
-	Recipient Uint168
-	Amount    *Fixed64
-}
-
-func (b *BlockChain) createTransaction(pd Payload,
+func (b *BlockChain) createTransaction(pd Payload, txType TxType,
 	fromAddress Uint168, fee Fixed64, lockedUntil uint32,
 	utxos []*UTXO, outputs ...*OutputInfo) (*Transaction, error) {
 	// check output
@@ -352,15 +353,6 @@ func (b *BlockChain) createTransaction(pd Payload,
 		return nil, err
 	}
 	txOutputs = append(txOutputs, changeOutputs...)
-	var txType TxType
-	switch pd.(type) {
-	case *payload.CRAssetsRectify:
-		txType = CRAssetsRectify
-	case *payload.CRCAppropriation:
-		txType = CRCAppropriation
-	default:
-		return nil, errors.New("Invalid payload type")
-	}
 	return &Transaction{
 		Version:    TxVersion09,
 		TxType:     txType,
@@ -382,12 +374,12 @@ func (b *BlockChain) createNormalOutputs(outputs []*OutputInfo, fee Fixed64,
 		txOutput := &Output{
 			AssetID:     *elaact.SystemAssetID,
 			ProgramHash: output.Recipient,
-			Value:       *output.Amount,
+			Value:       output.Amount,
 			OutputLock:  lockedUntil,
 			Type:        OTNone,
 			Payload:     &outputpayload.DefaultOutput{},
 		}
-		totalAmount += *output.Amount
+		totalAmount += output.Amount
 		txOutputs = append(txOutputs, txOutput)
 	}
 	return txOutputs, totalAmount, nil
@@ -478,11 +470,31 @@ func (b *BlockChain) CreateCRCAppropriationTransaction() (*Transaction, error) {
 		return nil, nil
 	}
 	outputs := []*OutputInfo{{b.chainParams.CRCCommitteeAddress,
-		&appropriationAmount}}
+		appropriationAmount}}
 
 	var tx *Transaction
-	tx, err = b.createTransaction(&payload.CRCAppropriation{},
+	tx, err = b.createTransaction(&payload.CRCAppropriation{}, CRCAppropriation,
 		b.chainParams.CRCFoundation, Fixed64(0), uint32(0), utxos, outputs...)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+func (b *BlockChain) CreateCRRealWithdrawTransaction(
+	withdrawTransactionHashes []Uint256, outputs []*OutputInfo) (*Transaction, error) {
+	utxos, err := b.getUTXOsFromAddress(b.chainParams.CRCCommitteeAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := &payload.CRCProposalRealWithdraw{
+		WithdrawTransactionHashes: withdrawTransactionHashes,
+	}
+
+	var tx *Transaction
+	tx, err = b.createTransaction(payload, CRCProposalRealWithdraw,
+		b.chainParams.CRCFoundation, Fixed64(RealWithdrawSingleFee), uint32(0), utxos, outputs...)
 	if err != nil {
 		return nil, err
 	}
@@ -494,6 +506,9 @@ func (b *BlockChain) CreateCRAssetsRectifyTransaction() (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(utxos) < int(b.chainParams.MaxCRAssetsAddressUTXOCount) {
+		return nil, errors.New("Avaliable utxo is less than MaxCRAssetsAddressUTXOCount")
+	}
 	var crcFoundationBalance Fixed64
 	for i, u := range utxos {
 		if i >= int(b.chainParams.MaxCRAssetsAddressUTXOCount) {
@@ -501,18 +516,18 @@ func (b *BlockChain) CreateCRAssetsRectifyTransaction() (*Transaction, error) {
 		}
 		crcFoundationBalance += u.Value
 	}
-	rectifyAmount := crcFoundationBalance
+	rectifyAmount := crcFoundationBalance - RectifyTxFee
 
 	log.Info("create CR assets rectify amount:", rectifyAmount)
 	if rectifyAmount <= 0 {
 		return nil, nil
 	}
 	outputs := []*OutputInfo{{b.chainParams.CRCFoundation,
-		&rectifyAmount}}
+		rectifyAmount}}
 
 	var tx *Transaction
-	tx, err = b.createTransaction(&payload.CRAssetsRectify{},
-		b.chainParams.CRCFoundation, Fixed64(0), uint32(0), utxos, outputs...)
+	tx, err = b.createTransaction(&payload.CRAssetsRectify{}, CRAssetsRectify,
+		b.chainParams.CRCFoundation, Fixed64(RectifyTxFee), uint32(0), utxos, outputs...)
 	if err != nil {
 		return nil, err
 	}

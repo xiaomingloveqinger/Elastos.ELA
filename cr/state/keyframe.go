@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/elastos/Elastos.ELA/common"
+	"github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
 	"github.com/elastos/Elastos.ELA/crypto"
 	"github.com/elastos/Elastos.ELA/utils"
@@ -167,6 +168,7 @@ type ProposalState struct {
 	TrackingCount    uint8
 	TerminatedHeight uint32
 	ProposalOwner    []byte
+	Recipient        common.Uint168
 }
 
 type ProposalHashSet map[common.Uint256]struct{}
@@ -223,6 +225,8 @@ type ProposalKeyFrame struct {
 	//key is did value is proposalhash set
 	ProposalHashes  map[common.Uint168]ProposalHashSet
 	ProposalSession map[uint64][]common.Uint256
+	// proposalWithdraw info
+	WithdrawableTxInfo map[common.Uint256]types.OutputInfo
 }
 
 func NewProposalMap() ProposalsMap {
@@ -1026,6 +1030,9 @@ func (p *ProposalKeyFrame) Serialize(w io.Writer) (err error) {
 	if err = p.serializeProposalSessionMap(p.ProposalSession, w); err != nil {
 		return
 	}
+	if err = p.serializeWithdrawableTransactionsMap(p.WithdrawableTxInfo, w); err != nil {
+		return
+	}
 	return
 }
 
@@ -1073,6 +1080,22 @@ func (p *ProposalKeyFrame) serializeProposalSessionMap(
 	return
 }
 
+func (p *ProposalKeyFrame) serializeWithdrawableTransactionsMap(
+	proposalWithdrableTx map[common.Uint256]types.OutputInfo, w io.Writer) (err error) {
+	if err = common.WriteVarUint(w, uint64(len(proposalWithdrableTx))); err != nil {
+		return
+	}
+	for k, v := range proposalWithdrableTx {
+		if err = k.Serialize(w); err != nil {
+			return
+		}
+		if err = v.Serialize(w); err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (p *ProposalKeyFrame) Deserialize(r io.Reader) (err error) {
 	var count uint64
 	if count, err = common.ReadVarUint(r, 0); err != nil {
@@ -1096,6 +1119,9 @@ func (p *ProposalKeyFrame) Deserialize(r io.Reader) (err error) {
 		return
 	}
 	if p.ProposalSession, err = p.deserializeProposalSessionMap(r); err != nil {
+		return
+	}
+	if p.WithdrawableTxInfo, err = p.deserializeWithdrawableTransactionsMap(r); err != nil {
 		return
 	}
 	return
@@ -1164,6 +1190,26 @@ func (p *ProposalKeyFrame) deserializeProposalSessionMap(r io.Reader) (
 	return
 }
 
+func (p *ProposalKeyFrame) deserializeWithdrawableTransactionsMap(r io.Reader) (
+	withdrawableTxsMap map[common.Uint256]types.OutputInfo, err error) {
+	var count uint64
+	if count, err = common.ReadVarUint(r, 0); err != nil {
+		return
+	}
+	withdrawableTxsMap = make(map[common.Uint256]types.OutputInfo)
+	for i := uint64(0); i < count; i++ {
+		var hash common.Uint256
+		if err = hash.Deserialize(r); err != nil {
+			return
+		}
+		var withdrawInfo types.OutputInfo
+		if err = withdrawInfo.Deserialize(r); err != nil {
+			return
+		}
+	}
+	return
+}
+
 // Snapshot will create a new ProposalKeyFrame object and deep copy all related data.
 func (p *ProposalKeyFrame) Snapshot() *ProposalKeyFrame {
 	buf := new(bytes.Buffer)
@@ -1176,9 +1222,10 @@ func (p *ProposalKeyFrame) Snapshot() *ProposalKeyFrame {
 
 func NewProposalKeyFrame() *ProposalKeyFrame {
 	return &ProposalKeyFrame{
-		Proposals:       make(map[common.Uint256]*ProposalState),
-		ProposalHashes:  make(map[common.Uint168]ProposalHashSet),
-		ProposalSession: make(map[uint64][]common.Uint256),
+		Proposals:          make(map[common.Uint256]*ProposalState),
+		ProposalHashes:     make(map[common.Uint168]ProposalHashSet),
+		ProposalSession:    make(map[uint64][]common.Uint256),
+		WithdrawableTxInfo: make(map[common.Uint256]types.OutputInfo),
 	}
 }
 
