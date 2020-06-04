@@ -218,6 +218,8 @@ var DefaultParams = Params{
 	MaxCRAssetsAddressUTXOCount:        3000,    // todo correct me later
 	CRAssetsRectifyTransactionHeight:   1000000, // todo correct me later
 	CRCProposalWithdrawPayloadV1Height: 1000000, // todo correct me later
+	RectifyTxFee:                       10000,
+	RealWithdrawSingleFee:              10000,
 }
 
 // TestNet returns the network parameters for the test network.
@@ -586,6 +588,12 @@ type Params struct {
 
 	// CRCProposalWithdrawPayloadV1Height defines the CRC proposal withdraw payload height
 	CRCProposalWithdrawPayloadV1Height uint32
+
+	// RectifyTxFee defines the fee of cr rectify transaction
+	RectifyTxFee common.Fixed64
+
+	// RealWithdrawSingleFee defines the single fee of cr real proposal withdraw transaction
+	RealWithdrawSingleFee common.Fixed64
 }
 
 // rewardPerBlock calculates the reward for each block by a specified time

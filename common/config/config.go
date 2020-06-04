@@ -118,6 +118,8 @@ type CRConfiguration struct {
 	MaxCRAssetsAddressUTXOCount        uint32  `json:"MaxCRAssetsAddressUTXOCount"`
 	CRAssetsRectifyTransactionHeight   uint32  `json:"CRAssetsRectifyTransactionHeight"`
 	CRCProposalWithdrawPayloadV1Height uint32  `json:"CRCProposalWithdrawPayloadV1Height"`
+	RectifyTxFee                       uint32  `json:"RectifyTxFee"`
+	RealWithdrawSingleFee              uint32  `json:"RealWithdrawSingleFee"`
 }
 
 type RPCServiceLevel byte
