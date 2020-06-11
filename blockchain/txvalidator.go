@@ -2877,9 +2877,6 @@ func (b *BlockChain) checkReturnCRDepositCoinTransaction(txn *Transaction,
 		if !b.crCommittee.Exist(*cid) {
 			return errors.New("signer must be candidate or member")
 		}
-		if !b.crCommittee.IsRefundable(*cid) {
-			return errors.New("signer must be refundable")
-		}
 
 		availableValue += b.crCommittee.GetAvailableDepositAmount(*cid)
 	}
