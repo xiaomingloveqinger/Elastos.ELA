@@ -694,6 +694,9 @@ func (s *State) processTransactions(txs []*types.Transaction, height uint32) {
 		s.processTransaction(tx, height)
 	}
 
+	// update cr member inactive period
+	s.updateCRInactivePeriod()
+
 	// Check if any pending producers has got 6 confirms, set them to activate.
 	activateProducerFromPending := func(key string, producer *Producer) {
 		s.history.Append(height, func() {
@@ -1350,6 +1353,17 @@ func (s *State) updateCRMemberState(nodePublicKey []byte, memberState state.Memb
 		for _, cr := range crMembers {
 			if bytes.Equal(cr.DPOSPublicKey, nodePublicKey) {
 				cr.MemberState = memberState
+			}
+		}
+	}
+}
+
+func (s *State) updateCRInactivePeriod() {
+	if s.getCRMembers != nil {
+		crMembers := s.getCRMembers()
+		for _, cr := range crMembers {
+			if cr.MemberState == state.MemberInactive {
+				cr.InactiveCount += 1
 			}
 		}
 	}
