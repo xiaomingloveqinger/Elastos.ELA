@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package state
 
@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/elastos/Elastos.ELA/common"
+	"github.com/elastos/Elastos.ELA/cr/state"
 )
 
 type ArbiterType uint8
@@ -29,6 +30,7 @@ type ArbiterMember interface {
 	GetOwnerProgramHash() common.Uint168
 
 	GetNodePublicKey() []byte
+	GetMemberState() state.MemberState
 	Clone() ArbiterMember
 }
 

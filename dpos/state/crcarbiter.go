@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package state
 
@@ -61,6 +61,10 @@ func (c *crcArbiter) GetOwnerProgramHash() common.Uint168 {
 
 func (c *crcArbiter) GetNodePublicKey() []byte {
 	return c.nodePk
+}
+
+func (c *crcArbiter) GetMemberState() state.MemberState {
+	return c.crMember.MemberState
 }
 
 func (c *crcArbiter) Clone() ArbiterMember {

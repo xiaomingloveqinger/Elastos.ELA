@@ -1,11 +1,12 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package state
 
 import (
+	"github.com/elastos/Elastos.ELA/cr/state"
 	"io"
 
 	"github.com/elastos/Elastos.ELA/common"
@@ -17,6 +18,7 @@ type originArbiter struct {
 	arType    ArbiterType
 	key       []byte
 	ownerHash common.Uint168
+	state     state.MemberState
 }
 
 func (o *originArbiter) Serialize(w io.Writer) error {
@@ -49,6 +51,10 @@ func (o *originArbiter) GetOwnerProgramHash() common.Uint168 {
 
 func (o *originArbiter) GetNodePublicKey() []byte {
 	return o.key
+}
+
+func (o *originArbiter) GetMemberState() state.MemberState {
+	return o.state
 }
 
 func (o *originArbiter) Clone() ArbiterMember {

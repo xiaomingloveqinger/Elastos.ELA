@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package manager
 
@@ -12,6 +12,7 @@ import (
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	. "github.com/elastos/Elastos.ELA/cr/state"
 	"github.com/elastos/Elastos.ELA/dpos/dtime"
 	"github.com/elastos/Elastos.ELA/dpos/log"
 	"github.com/elastos/Elastos.ELA/dpos/p2p/msg"
@@ -96,6 +97,14 @@ func (h *DPOSHandlerSwitch) FinishConsensus(height uint32, blockHash common.Uint
 }
 
 func (h *DPOSHandlerSwitch) ProcessProposal(id peer.PID, p *payload.DPOSProposal) (handled bool) {
+	crcArbiters := h.cfg.Arbitrators.GetCRCArbiters()
+	for _, pk := range crcArbiters {
+		member := h.cfg.Arbitrators.GetConnectedProducer(pk)
+		if member != nil && bytes.Equal(member.GetOwnerPublicKey(), id[:]) && member.GetMemberState() == MemberInactive {
+			return true
+		}
+	}
+
 	handled = h.currentHandler.ProcessProposal(id, p)
 
 	proposalEvent := log.ProposalEvent{

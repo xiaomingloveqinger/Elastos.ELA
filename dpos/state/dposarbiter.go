@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2020 The Elastos Foundation
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
-// 
+//
 
 package state
 
@@ -11,12 +11,14 @@ import (
 
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/core/contract"
+	"github.com/elastos/Elastos.ELA/cr/state"
 )
 
 type dposArbiter struct {
 	arType    ArbiterType
 	producer  Producer
 	ownerHash common.Uint168
+	state     state.MemberState
 }
 
 func (d *dposArbiter) Serialize(w io.Writer) (err error) {
@@ -58,6 +60,10 @@ func (d *dposArbiter) GetOwnerProgramHash() common.Uint168 {
 
 func (d *dposArbiter) GetNodePublicKey() []byte {
 	return d.producer.NodePublicKey()
+}
+
+func (d *dposArbiter) GetMemberState() state.MemberState {
+	return d.state
 }
 
 func NewDPoSArbiter(t ArbiterType, producer *Producer) (ArbiterMember, error) {
