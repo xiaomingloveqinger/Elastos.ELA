@@ -667,6 +667,7 @@ func (s *State) ProcessBlock(block *types.Block, confirm *payload.Confirm) {
 	defer s.mtx.Unlock()
 
 	s.tryInitProducerAssetAmounts(block.Height)
+	s.updateCRInactivePeriod()
 	s.processTransactions(block.Transactions, block.Height)
 	s.ProcessVoteStatisticsBlock(block)
 
@@ -693,9 +694,6 @@ func (s *State) processTransactions(txs []*types.Transaction, height uint32) {
 	for _, tx := range txs {
 		s.processTransaction(tx, height)
 	}
-
-	// update cr member inactive period
-	s.updateCRInactivePeriod()
 
 	// Check if any pending producers has got 6 confirms, set them to activate.
 	activateProducerFromPending := func(key string, producer *Producer) {
