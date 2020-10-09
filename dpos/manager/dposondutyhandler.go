@@ -49,13 +49,15 @@ func (h *DPOSOnDutyHandler) ProcessProposal(id peer.PID, p *payload.DPOSProposal
 func (h *DPOSOnDutyHandler) ChangeView(firstBlockHash *common.Uint256) {
 
 	if !h.tryCreateInactiveArbitratorsTx() {
-		b, ok := h.cfg.Manager.GetBlockCache().TryGetValue(*firstBlockHash)
+		_, ok := h.cfg.Manager.GetBlockCache().TryGetValue(*firstBlockHash)
 		if !ok {
 			log.Info("[OnViewChanged] get block failed for proposal")
 		} else {
 			log.Info("[OnViewChanged] start proposal")
 			h.proposalDispatcher.CleanProposals(true)
-			h.proposalDispatcher.StartProposal(b)
+			h.consensus.SetReady()
+			log.Info("Not process change view proposal for now")
+			//h.proposalDispatcher.StartProposal(b)
 		}
 	}
 }

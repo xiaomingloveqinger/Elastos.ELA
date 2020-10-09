@@ -126,6 +126,7 @@ func (h *DPOSHandlerSwitch) ChangeView(firstBlockHash *common.Uint256) {
 }
 
 func (h *DPOSHandlerSwitch) TryStartNewConsensus(b *types.Block) bool {
+	log.Info("[DPOSHandlerSwitch] current handle block hash version " , b.Hash(), b.Version)
 	if _, ok := h.cfg.Manager.GetBlockCache().TryGetValue(b.Hash()); ok {
 		log.Info("[TryStartNewConsensus] failed, already have the block")
 		return false
@@ -235,15 +236,19 @@ func (h *DPOSHandlerSwitch) RecoverAbnormal(status *msg.ConsensusStatus) {
 }
 
 func (h *DPOSHandlerSwitch) OnViewChanged(isOnDuty bool) {
-	h.SwitchTo(isOnDuty)
 
-	firstBlockHash, ok := h.cfg.Manager.GetBlockCache().GetFirstArrivedBlockHash()
-	block, existBlock := h.cfg.Manager.GetBlockCache().TryGetValue(firstBlockHash)
-	if isOnDuty && (!ok ||
-		!existBlock || block.Height <= h.proposalDispatcher.GetFinishedHeight()) {
-		log.Warn("[OnViewChanged] firstBlockHash is nil")
-		return
-	}
-	log.Info("OnViewChanged, getBlock from first block hash:", firstBlockHash, "onduty:", isOnDuty)
-	h.ChangeView(&firstBlockHash)
+	h.proposalDispatcher.CleanProposals(true)
+	h.consensus.SetReady()
+
+	//h.SwitchTo(isOnDuty)
+	//
+	//firstBlockHash, ok := h.cfg.Manager.GetBlockCache().GetFirstArrivedBlockHash()
+	//block, existBlock := h.cfg.Manager.GetBlockCache().TryGetValue(firstBlockHash)
+	//if isOnDuty && (!ok ||
+	//	!existBlock || block.Height <= h.proposalDispatcher.GetFinishedHeight()) {
+	//	log.Warn("[OnViewChanged] firstBlockHash is nil")
+	//	return
+	//}
+	//log.Info("OnViewChanged, getBlock from first block hash:", firstBlockHash, "onduty:", isOnDuty)
+	//h.ChangeView(&firstBlockHash)
 }

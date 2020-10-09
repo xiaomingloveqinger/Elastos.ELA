@@ -274,7 +274,7 @@ func (c *ChainStoreFFLDB) GetBlock(hash Uint256) (*DposBlock, error) {
 	b := new(DposBlock)
 	err = b.Deserialize(bytes.NewReader(blkBytes))
 	if err != nil {
-		return nil, errors.New("failed to deserialize block")
+		return nil, errors.New("failed to deserialize block" + err.Error())
 	}
 
 	c.mtx.Lock()

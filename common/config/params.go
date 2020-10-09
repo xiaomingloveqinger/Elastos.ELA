@@ -351,7 +351,7 @@ func (p *Params) RegNet() *Params {
 	copy.CRCommitteeStartHeight = 442000
 	copy.CRClaimDPOSNodeStartHeight = 532650
 	copy.CRClaimDPOSNodePeriod = 720
-	copy.CRCProposalV1Height = 530000
+	copy.CRCProposalV1Height = 1000
 	copy.NewP2PProtocolVersionHeight = 531030
 	copy.CRAssetsRectifyTransactionHeight = 532650
 	copy.CRCProposalWithdrawPayloadV1Height = 532650

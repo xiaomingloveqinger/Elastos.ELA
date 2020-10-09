@@ -7,8 +7,8 @@ package manager
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
-
 	"github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/config"
@@ -115,6 +115,8 @@ func (p *ProposalDispatcher) AddPendingVote(v *payload.DPOSProposalVote) {
 	p.pendingVotes[v.Hash()] = v
 }
 
+var i = 0
+
 func (p *ProposalDispatcher) StartProposal(b *types.Block) {
 	log.Info("[StartProposal] start")
 	defer log.Info("[StartProposal] end")
@@ -125,7 +127,49 @@ func (p *ProposalDispatcher) StartProposal(b *types.Block) {
 	}
 	p.processingBlock = b
 
+
+	// start fake proposal
+	oldVersion := b.Version
+	//str := "02C011C38486EAB9195F39BEEA18003584D65B3F28E7EC9C9D1D7E9B9CEEF4C665"
+	//if i == 0 && hex.EncodeToString(p.cfg.Manager.GetPublicKey()) == strings.ToLower(str){
+	if i == 0 {
+		b.Version = 99
+		log.Info("############################ Fake hash is ", b.Hash().String())
+		proposal1 := &payload.DPOSProposal{Sponsor: p.cfg.Manager.GetPublicKey(),
+			BlockHash: b.Hash() , ViewOffset: p.cfg.Consensus.GetViewOffset()}
+		var err1 error
+		proposal1.Sign, err1 = p.cfg.Account.SignProposal(proposal1)
+		if err1 != nil {
+			log.Error("[StartProposal] start proposal failed:", err1.Error())
+			return
+		}
+
+		log.Info("[StartProposal] sponsor:", p.cfg.Manager.GetPublicKey())
+
+		m1 := &dmsg.Proposal{
+			Proposal: *proposal1,
+		}
+
+		log.Info("[StartProposal] send fake proposal message finished, Proposal Hash: ", dmsg.GetMessageHash(m1))
+		p.cfg.Network.BroadcastMessage(m1)
+
+
+		proposalEvent1 := log.ProposalEvent{
+			Sponsor:      common.BytesToHexString(proposal1.Sponsor),
+			BlockHash:    proposal1.BlockHash,
+			ReceivedTime: p.cfg.TimeSource.AdjustedTime(),
+			ProposalHash: proposal1.Hash(),
+			RawData:      proposal1,
+			Result:       false,
+		}
+		p.cfg.EventMonitor.OnProposalArrived(&proposalEvent1)
+		p.acceptProposal(proposal1)
+		i++
+	}
+
 	//p.cfg.Network.BroadcastMessage(dmsg.NewInventory(b.Hash()))
+	b.Version = oldVersion
+	log.Info("Real hash is ", b.Hash().String())
 	proposal := &payload.DPOSProposal{Sponsor: p.cfg.Manager.GetPublicKey(),
 		BlockHash: b.Hash(), ViewOffset: p.cfg.Consensus.GetViewOffset()}
 	var err error
@@ -164,6 +208,7 @@ func (p *ProposalDispatcher) TryStartSpeculatingProposal(b *types.Block) {
 		log.Warn("[TryStartSpeculatingProposal] processingBlock is not nil")
 		return
 	}
+	log.Info("processingBlock is ", b.Hash().String())
 	p.processingBlock = b
 }
 
@@ -252,6 +297,7 @@ func (p *ProposalDispatcher) ProcessProposal(id peer.PID, d *payload.DPOSProposa
 	log.Info("[ProcessProposal] start")
 	defer log.Info("[ProcessProposal] end")
 
+	log.Info("id " , hex.EncodeToString(id[:]), " sponsor ", hex.EncodeToString(d.Sponsor), " proposal hash ", d.Hash().String())
 	self := bytes.Equal(id[:], d.Sponsor)
 	if err := blockchain.ProposalCheck(d); err != nil {
 		log.Warn("invalid proposal: ", err.Error())
@@ -263,12 +309,15 @@ func (p *ProposalDispatcher) ProcessProposal(id peer.PID, d *payload.DPOSProposa
 		return true, !self
 	}
 
+	if p.processingProposal != nil {
+		log.Info("processingProposal ", p.processingProposal.Hash().String())
+	}
 	if p.processingProposal != nil && d.Hash().IsEqual(
 		p.processingProposal.Hash()) {
 		log.Info("already processing proposal")
 		return true, true
 	}
-
+	log.Info("proposal blockHash ",d.BlockHash.String())
 	if _, err := blockchain.DefaultLedger.Blockchain.GetBlockByHash(d.BlockHash); err == nil {
 		log.Info("already exist block in block chain")
 		return true, true
@@ -286,7 +335,7 @@ func (p *ProposalDispatcher) ProcessProposal(id peer.PID, d *payload.DPOSProposa
 		}
 		return true, !self
 	}
-
+	log.Info("force or not ",force)
 	if !force {
 		if _, ok := p.pendingProposals[d.Hash()]; ok {
 			log.Info("already have proposal, wait for processing")
@@ -294,11 +343,13 @@ func (p *ProposalDispatcher) ProcessProposal(id peer.PID, d *payload.DPOSProposa
 		}
 	}
 
+	log.Info("Check if proposal is legal")
 	if anotherProposal, ok := p.illegalMonitor.IsLegalProposal(d); !ok {
 		p.illegalMonitor.ProcessIllegalProposal(d, anotherProposal)
 		return true, true
 	}
 
+	log.Info("[Fake] current onduty arbiters ", hex.EncodeToString(p.cfg.Consensus.GetOnDutyArbitrator()))
 	if !p.cfg.Consensus.IsArbitratorOnDuty(d.Sponsor) {
 		currentArbiter := p.cfg.Manager.GetArbitrators().GetNextOnDutyArbitrator(p.cfg.Consensus.GetViewOffset())
 		log.Info("viewOffset:", p.cfg.Consensus.GetViewOffset(), "current arbiter:",
@@ -309,8 +360,10 @@ func (p *ProposalDispatcher) ProcessProposal(id peer.PID, d *payload.DPOSProposa
 	}
 
 	currentBlock, ok := p.cfg.Manager.GetBlockCache().TryGetValue(d.BlockHash)
+	log.Info("Found block from cache ", ok , " is concensus runing ", p.cfg.Consensus.IsRunning())
 	if !ok || !p.cfg.Consensus.IsRunning() {
 		p.pendingProposals[d.Hash()] = d
+		log.Info("can not find block request block ",d.BlockHash.String())
 		p.cfg.Manager.OnInv(id, d.BlockHash)
 		log.Info("received pending proposal")
 		return true, true
@@ -741,6 +794,7 @@ func (p *ProposalDispatcher) rejectProposal(d *payload.DPOSProposal) {
 }
 
 func (p *ProposalDispatcher) setProcessingProposal(d *payload.DPOSProposal) (finished bool) {
+	log.Info("Set processing proposal " , d.Hash().String())
 	p.processingProposal = d
 
 	for _, v := range p.pendingVotes {

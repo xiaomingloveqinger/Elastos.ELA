@@ -3257,6 +3257,7 @@ func CheckDPOSIllegalProposals(d *payload.DPOSIllegalProposals) error {
 		return errors.New("should be in same height")
 	}
 
+	log.Info(d.Evidence.Proposal.BlockHash.String(),d.CompareEvidence.Proposal.BlockHash.String())
 	if d.Evidence.Proposal.Hash().IsEqual(d.CompareEvidence.Proposal.Hash()) {
 		return errors.New("proposals can not be same")
 	}
@@ -3536,7 +3537,7 @@ func validateProposalEvidence(evidence *payload.ProposalEvidence) error {
 	if header.Height != evidence.BlockHeight {
 		return errors.New("evidence height and block height should match")
 	}
-
+	log.Info("validateProposalEvidence ", header.Version,header.Height,header.Bits,header.Hash().String(),evidence.Proposal.BlockHash.String())
 	if !header.Hash().IsEqual(evidence.Proposal.BlockHash) {
 		return errors.New("proposal hash and block should match")
 	}

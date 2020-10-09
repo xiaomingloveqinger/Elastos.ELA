@@ -7,6 +7,7 @@ package manager
 
 import (
 	"bytes"
+	"encoding/hex"
 
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/core/contract/program"
@@ -93,16 +94,22 @@ func (i *IllegalBehaviorMonitor) CleanByBlock(b *types.Block) {
 }
 
 func (i *IllegalBehaviorMonitor) IsLegalProposal(p *payload.DPOSProposal) (*payload.DPOSProposal, bool) {
+	log.Info("IsLegalProposal " )
+	if i.dispatcher.processingProposal != nil {
+		log.Info("processingProposal ",i.dispatcher.processingProposal.Hash(), " blockhash ",i.dispatcher.processingProposal.BlockHash.String())
+	}
 	if i.isProposalsIllegal(p, i.dispatcher.processingProposal) {
 		return i.dispatcher.processingProposal, false
 	}
 
 	for _, pending := range i.dispatcher.pendingProposals {
+		log.Info("pendingProposals ",pending.Hash(), " blockhash ",pending.BlockHash.String())
 		if i.isProposalsIllegal(p, pending) {
 			return pending, false
 		}
 	}
 	for _, pre := range i.dispatcher.precociousProposals {
+		log.Info("precociousProposals ",pre.Hash(), " blockhash ",pre.BlockHash.String())
 		if i.isProposalsIllegal(p, pre) {
 			return pre, false
 		}
@@ -116,11 +123,11 @@ func (i *IllegalBehaviorMonitor) generateProposalEvidence(
 
 	block, _ := i.dispatcher.cfg.Manager.GetBlockCache().TryGetValue(
 		p.BlockHash)
+	log.Info("Get cached block vesion is ", block.Version,block.Header.Hash(),block.Header.Height,p.BlockHash.String())
 	blockByte := new(bytes.Buffer)
 	if err := block.Header.Serialize(blockByte); err != nil {
 		return nil, err
 	}
-
 	return &payload.ProposalEvidence{
 		Proposal:    *p,
 		BlockHeader: blockByte.Bytes(),
@@ -130,7 +137,7 @@ func (i *IllegalBehaviorMonitor) generateProposalEvidence(
 
 func (i *IllegalBehaviorMonitor) ProcessIllegalProposal(
 	first, second *payload.DPOSProposal) {
-
+	log.Info("ProcessIllegalProposal" , first.BlockHash.String())
 	firstEvidence, err := i.generateProposalEvidence(first)
 	if err != nil {
 		log.Warn("[ProcessIllegalProposal] generate evidence error: ", err)
@@ -157,7 +164,7 @@ func (i *IllegalBehaviorMonitor) ProcessIllegalProposal(
 
 	i.AddEvidence(evidences)
 	i.sendIllegalProposalTransaction(evidences)
-
+	log.Info("Send Illegal Evidence")
 	m := &dmsg.IllegalProposals{Proposals: *evidences}
 	i.dispatcher.cfg.Network.BroadcastMessage(m)
 }
@@ -283,24 +290,30 @@ func (i *IllegalBehaviorMonitor) ProcessIllegalVote(
 }
 
 func (i *IllegalBehaviorMonitor) isProposalsIllegal(first, second *payload.DPOSProposal) bool {
+	log.Infof("first %v second %v",first , second)
 	if first == nil || second == nil {
 		return false
 	}
 
+	log.Info("first blockhash ",first.BlockHash.String() , " Second blockhash ", second.BlockHash.String())
 	if first.BlockHash.IsEqual(second.BlockHash) {
 		return false
 	}
 
+	log.Info("first Sponsor ",hex.EncodeToString(first.Sponsor), " Second Sponsor ", hex.EncodeToString(second.Sponsor))
 	if !bytes.Equal(first.Sponsor, second.Sponsor) || first.ViewOffset != second.ViewOffset {
 		return false
 	}
 
+
 	firstBlock, foundFirst := i.dispatcher.cfg.Manager.GetBlockCache().TryGetValue(first.BlockHash)
 	secondBlock, foundSecond := i.dispatcher.cfg.Manager.GetBlockCache().TryGetValue(second.BlockHash)
+	log.Info("foundFirst ",foundFirst , " FoundSecond ", foundSecond)
 	if !foundFirst || !foundSecond {
 		return false
 	}
 
+	log.Info("first height ", firstBlock.Height , " second height ", secondBlock.Height)
 	if firstBlock.Height == secondBlock.Height {
 		return true
 	}
