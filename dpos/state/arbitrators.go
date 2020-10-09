@@ -387,6 +387,9 @@ func (a *arbitrators) notifyNextTurnDPOSInfoTx(blockHeight, versionHeight uint32
 		})
 	}
 	workingHeight := blockHeight + uint32(len(a.currentArbitrators))
+	if a.chainParams.ChangeCommitteeNewCrHeight >= blockHeight && a.isInElectionPeriod != nil && !a.isInElectionPeriod() {
+		producers = make([]ArbiterMember, 0)
+	}
 	nextTurnDPOSInfoTx := a.createNextTurnDPOSInfoTransaction(a.nextCRCArbiters, producers, workingHeight)
 	go events.Notify(events.ETAppendTxToTxPool, nextTurnDPOSInfoTx)
 }
@@ -1237,7 +1240,9 @@ func (a *arbitrators) createNextTurnDPOSInfoTransaction(crcArbiters, normalDPOSA
 
 func (a *arbitrators) updateNextTurnInfo(height uint32, producers []ArbiterMember) {
 	nextCRCArbiters := a.nextArbitrators
-	a.nextArbitrators = append(a.nextArbitrators, producers...)
+	if !(height >= a.chainParams.ChangeCommitteeNewCrHeight && a.isInElectionPeriod != nil && !a.isInElectionPeriod()) {
+		a.nextArbitrators = append(a.nextArbitrators, producers...)
+	}
 	sort.Slice(a.nextArbitrators, func(i, j int) bool {
 		return bytes.Compare(a.nextArbitrators[i].GetNodePublicKey(), a.nextArbitrators[j].GetNodePublicKey()) < 0
 	})
