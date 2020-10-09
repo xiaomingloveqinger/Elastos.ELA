@@ -1276,6 +1276,72 @@ func (a *arbitrators) updateNextArbitrators(versionHeight, height uint32) error 
 	return nil
 }
 
+func (a *arbitrators) getDPoSArbitersV0(height uint32) error {
+	crcArbiters := map[common.Uint168]ArbiterMember{}
+	for _, pk := range a.chainParams.CRCArbiters {
+		pubKey, err := hex.DecodeString(pk)
+		if err != nil {
+			return err
+		}
+		producer := &Producer{ // here need crc NODE public key
+			info: payload.ProducerInfo{
+				OwnerPublicKey: pubKey,
+				NodePublicKey:  pubKey,
+			},
+			activateRequestHeight: math.MaxUint32,
+		}
+		ar, err := NewDPoSArbiter(CROrigin, producer)
+		if err != nil {
+			return err
+		}
+		crcArbiters[ar.GetOwnerProgramHash()] = ar
+	}
+
+	oriNextArbitersMap := a.nextCRCArbitersMap
+	oriCRCChangedHeight := a.crcChangedHeight
+	a.history.Append(height, func() {
+		a.nextCRCArbitersMap = crcArbiters
+		a.crcChangedHeight = a.crCommittee.LastCommitteeHeight
+	}, func() {
+		a.nextCRCArbitersMap = oriNextArbitersMap
+		a.crcChangedHeight = oriCRCChangedHeight
+	})
+	return nil
+}
+
+func (a *arbitrators) getDPoSArbitersV1(versionHeight uint32, height uint32) error {
+	crcArbiters := map[common.Uint168]ArbiterMember{}
+	count := a.chainParams.GeneralArbiters + int(a.chainParams.CRMemberCount)
+	votedProducers := a.State.GetVotedProducers()
+	sort.Slice(votedProducers, func(i, j int) bool {
+		if votedProducers[i].votes == votedProducers[j].votes {
+			return bytes.Compare(votedProducers[i].info.NodePublicKey,
+				votedProducers[j].NodePublicKey()) < 0
+		}
+		return votedProducers[i].Votes() > votedProducers[j].Votes()
+	})
+
+	producers, err := a.GetNormalArbitratorsDesc(versionHeight, count,
+		votedProducers)
+	if err != nil {
+		return err
+	}
+	for _, p := range producers {
+		crcArbiters[p.GetOwnerProgramHash()] = p
+	}
+
+	oriNextArbitersMap := a.nextCRCArbitersMap
+	oriCRCChangedHeight := a.crcChangedHeight
+	a.history.Append(height, func() {
+		a.nextCRCArbitersMap = crcArbiters
+		a.crcChangedHeight = a.crCommittee.LastCommitteeHeight
+	}, func() {
+		a.nextCRCArbitersMap = oriNextArbitersMap
+		a.crcChangedHeight = oriCRCChangedHeight
+	})
+	return nil
+}
+
 func (a *arbitrators) resetNextArbiterByCRC(versionHeight uint32, height uint32) error {
 	if a.crCommittee != nil && a.crCommittee.IsInElectionPeriod() {
 		var crcArbiters map[common.Uint168]ArbiterMember
@@ -1301,35 +1367,15 @@ func (a *arbitrators) resetNextArbiterByCRC(versionHeight uint32, height uint32)
 			a.crcChangedHeight = oriCRCChangedHeight
 		})
 	} else if versionHeight >= a.chainParams.CRCommitteeStartHeight {
-		crcArbiters := map[common.Uint168]ArbiterMember{}
-		for _, pk := range a.chainParams.CRCArbiters {
-			pubKey, err := hex.DecodeString(pk)
-			if err != nil {
+		if versionHeight < a.chainParams.ChangeCommitteeNewCrHeight {
+			if err := a.getDPoSArbitersV0(height); err != nil {
 				return err
 			}
-			producer := &Producer{ // here need crc NODE public key
-				info: payload.ProducerInfo{
-					OwnerPublicKey: pubKey,
-					NodePublicKey:  pubKey,
-				},
-				activateRequestHeight: math.MaxUint32,
-			}
-			ar, err := NewDPoSArbiter(CROrigin, producer)
-			if err != nil {
+		} else {
+			if err := a.getDPoSArbitersV1(versionHeight, height); err != nil {
 				return err
 			}
-			crcArbiters[ar.GetOwnerProgramHash()] = ar
 		}
-
-		oriNextArbitersMap := a.nextCRCArbitersMap
-		oriCRCChangedHeight := a.crcChangedHeight
-		a.history.Append(height, func() {
-			a.nextCRCArbitersMap = crcArbiters
-			a.crcChangedHeight = a.crCommittee.LastCommitteeHeight
-		}, func() {
-			a.nextCRCArbitersMap = oriNextArbitersMap
-			a.crcChangedHeight = oriCRCChangedHeight
-		})
 	}
 
 	oriNextArbiters := a.nextArbitrators

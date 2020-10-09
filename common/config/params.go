@@ -281,6 +281,7 @@ func (p *Params) TestNet() *Params {
 	copy.CRClaimDPOSNodePeriod = 720 * 7
 	copy.CRCProposalV1Height = 646700
 	copy.NewP2PProtocolVersionHeight = 646700
+	copy.ChangeCommitteeNewCrHeight = 1000000 //TODO reset latter
 	copy.CRAssetsRectifyTransactionHeight = 646700
 	copy.CRCProposalWithdrawPayloadV1Height = 646700
 	copy.EnableActivateIllegalHeight = 546500
@@ -352,6 +353,7 @@ func (p *Params) RegNet() *Params {
 	copy.CRClaimDPOSNodePeriod = 720
 	copy.CRCProposalV1Height = 530000
 	copy.NewP2PProtocolVersionHeight = 531030
+	copy.ChangeCommitteeNewCrHeight = 1000000 //TODO reset latter
 	copy.CRAssetsRectifyTransactionHeight = 532650
 	copy.CRCProposalWithdrawPayloadV1Height = 532650
 	copy.EnableActivateIllegalHeight = 256000
@@ -636,6 +638,9 @@ type Params struct {
 
 	// NewP2PProtocolVersionHeight defines the new p2p protocol version message height
 	NewP2PProtocolVersionHeight uint64
+
+	// ChangeCommitteeNewCrHeight defines the new arbiter logic after change committee
+	ChangeCommitteeNewCrHeight uint32
 }
 
 // rewardPerBlock calculates the reward for each block by a specified time
