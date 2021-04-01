@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/elastos/Elastos.ELA/common/log"
 	"github.com/elastos/Elastos.ELA/core/contract"
 	"io"
 
@@ -311,7 +310,8 @@ func (tx *Transaction) DeserializeUnsigned(r io.Reader) error {
 		return err
 	}
 	tx.PayloadVersion = payloadVersion[0]
-	log.Infof("txType %s", tx.TxType.Name())
+	fmt.Println(111)
+	fmt.Println("Name is ",tx.TxType.Name())
 	tx.Payload, err = GetPayload(tx.TxType)
 	if err != nil {
 		return err
