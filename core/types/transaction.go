@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/elastos/Elastos.ELA/common/log"
 	"github.com/elastos/Elastos.ELA/core/contract"
 	"io"
 
@@ -146,6 +147,8 @@ func (self TxType) Name() string {
 		return "RevertToPOW"
 	case RevertToDPOS:
 		return "RevertToDPOS"
+	case ReturnSideChainDepositCoin:
+		return "ReturnSideChainDepositCoin"
 	default:
 		return "Unknown"
 	}
@@ -308,7 +311,7 @@ func (tx *Transaction) DeserializeUnsigned(r io.Reader) error {
 		return err
 	}
 	tx.PayloadVersion = payloadVersion[0]
-
+	log.Infof("txType ", tx.TxType.Name())
 	tx.Payload, err = GetPayload(tx.TxType)
 	if err != nil {
 		return err
@@ -663,6 +666,8 @@ func GetPayload(txType TxType) (Payload, error) {
 		p = new(payload.RevertToPOW)
 	case CustomIDResult:
 		p = new(payload.CustomIDProposalResult)
+	case ReturnSideChainDepositCoin:
+		p = new(payload.IllegalDepositTxs)
 	default:
 		return nil, errors.New("[Transaction], invalid transaction type.")
 	}
