@@ -311,7 +311,7 @@ func (tx *Transaction) DeserializeUnsigned(r io.Reader) error {
 		return err
 	}
 	tx.PayloadVersion = payloadVersion[0]
-	log.Infof("txType ", tx.TxType.Name())
+	log.Infof("txType %s", tx.TxType.Name())
 	tx.Payload, err = GetPayload(tx.TxType)
 	if err != nil {
 		return err
