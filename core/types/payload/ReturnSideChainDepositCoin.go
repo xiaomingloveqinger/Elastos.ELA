@@ -11,7 +11,6 @@ import (
 	"io"
 
 	"github.com/elastos/Elastos.ELA/common"
-	"github.com/elastos/Elastos.ELA/crypto"
 )
 
 const ReturnSideChainDepositCoinVersion byte = 0x00
@@ -20,7 +19,6 @@ type ReturnSideChainDepositCoin struct {
 	Height              uint32
 	GenesisBlockAddress string
 	DepositTxs          []common.Uint256
-	Signs               [][]byte
 
 	hash *common.Uint256
 }
@@ -67,15 +65,6 @@ func (s *ReturnSideChainDepositCoin) Serialize(w io.Writer, version byte) error 
 		return err
 	}
 
-	if err := common.WriteVarUint(w, uint64(len(s.Signs))); err != nil {
-		return err
-	}
-	for _, v := range s.Signs {
-		if err := common.WriteVarBytes(w, v); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -109,19 +98,6 @@ func (s *ReturnSideChainDepositCoin) Deserialize(r io.Reader, version byte) erro
 	var err error
 	if err = s.DeserializeUnsigned(r, version); err != nil {
 		return err
-	}
-
-	var signLen uint64
-	if signLen, err = common.ReadVarUint(r, 0); err != nil {
-		return err
-	}
-	s.Signs = make([][]byte, signLen)
-	for i := 0; i < int(signLen); i++ {
-		s.Signs[i], err = common.ReadVarBytes(r, crypto.SignatureLength,
-			"Signature")
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

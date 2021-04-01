@@ -8,6 +8,7 @@ package types
 import (
 	"errors"
 	"io"
+	"strconv"
 
 	"github.com/elastos/Elastos.ELA/common"
 )
@@ -86,7 +87,7 @@ func (attr *Attribute) Deserialize(r io.Reader) error {
 	}
 	attr.Usage = AttributeUsage(val[0])
 	if !IsValidAttributeType(attr.Usage) {
-		return errors.New("[Attribute error] Deserialize Unsupported attribute Description.")
+		return errors.New("[Attribute error] Deserialize Unsupported attribute Description." + strconv.Itoa(int(attr.Usage)))
 	}
 	attr.Data, err = common.ReadVarBytes(r, common.MaxVarStringLength,
 		"attribute data")

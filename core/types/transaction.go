@@ -311,7 +311,7 @@ func (tx *Transaction) DeserializeUnsigned(r io.Reader) error {
 	}
 	tx.PayloadVersion = payloadVersion[0]
 	fmt.Println(111)
-	fmt.Println("Name is ",tx.TxType.Name())
+	fmt.Println("Name is ", tx.TxType.Name())
 	tx.Payload, err = GetPayload(tx.TxType)
 	if err != nil {
 		return err
@@ -329,7 +329,7 @@ func (tx *Transaction) DeserializeUnsigned(r io.Reader) error {
 	for i := uint64(0); i < count; i++ {
 		var attr Attribute
 		if err := attr.Deserialize(r); err != nil {
-			return err
+			return errors.New(err.Error() + " " +tx.TxType.Name())
 		}
 		tx.Attributes = append(tx.Attributes, &attr)
 	}
