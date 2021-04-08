@@ -667,7 +667,7 @@ func GetPayload(txType TxType) (Payload, error) {
 	case CustomIDResult:
 		p = new(payload.CustomIDProposalResult)
 	case ReturnSideChainDepositCoin:
-		p = new(payload.IllegalDepositTxs)
+		p = new(payload.ReturnSideChainDepositCoin)
 	default:
 		return nil, errors.New("[Transaction], invalid transaction type.")
 	}
