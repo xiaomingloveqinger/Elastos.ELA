@@ -2485,14 +2485,17 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 			if err != nil {
 				return err
 			}
-
+			log.Infof(" refTx %v",refTx)
 			// need to return the deposit coin to first input address
 			o := refTx.Outputs[tx.Inputs[0].Previous.Index]
 			depositAmount[o.ProgramHash] += output.Value
 			depositFee[o.ProgramHash] += fee
 		}
 	}
+	log.Infof("depositAmount %v",depositAmount)
+	log.Infof("depositFee %v",depositFee)
 	for _, output := range txn.Outputs {
+		log.Infof("output %v ", output.ProgramHash)
 		amount, ok := depositAmount[output.ProgramHash]
 		if !ok {
 			return errors.New("invalid output")
