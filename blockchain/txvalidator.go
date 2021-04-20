@@ -2523,9 +2523,6 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 		}
 		delete(depositAmount, output.ProgramHash)
 	}
-	if len(depositAmount) != 0 {
-		return errors.New("invalid output amount fee")
-	}
 
 	return nil
 }
