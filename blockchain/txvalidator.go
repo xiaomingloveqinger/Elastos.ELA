@@ -2514,7 +2514,7 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 		log.Infof("output %v ", output.ProgramHash)
 		amount, ok := depositAmount[output.ProgramHash]
 		if !ok {
-			return errors.New("invalid output")
+			continue
 		}
 		fee := depositFee[output.ProgramHash]
 		if output.Value+fee != amount {
