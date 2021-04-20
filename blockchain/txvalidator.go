@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/config"
@@ -2468,7 +2469,18 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 		if err != nil {
 			return errors.New("invalid deposit tx:" + t.String())
 		}
-		for _, output := range tx.Outputs {
+
+		crsAssets, ok := tx.Payload.(*payload.TransferCrossChainAsset)
+		if !ok {
+			return errors.New("invalid payload type")
+		}
+
+		crsInfo := make(map[uint64]common.Fixed64)
+		for i, amt := range crsAssets.CrossChainAmounts {
+			crsInfo[crsAssets.OutputIndexes[i]] = amt
+		}
+		log.Info("crsinfo %v", crsInfo)
+		for i, output := range tx.Outputs {
 			if bytes.Compare(output.ProgramHash[0:1], []byte{byte(contract.PrefixCrossChain)}) != 0 {
 				continue
 			}
@@ -2485,15 +2497,19 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 			if err != nil {
 				return err
 			}
-			log.Infof(" refTx %v",refTx)
+			log.Infof(" refTx %v", refTx)
 			// need to return the deposit coin to first input address
 			o := refTx.Outputs[tx.Inputs[0].Previous.Index]
-			depositAmount[o.ProgramHash] += output.Value
+			val, ok := crsInfo[uint64(i)]
+			if !ok {
+				return errors.New("can not find index " + strconv.Itoa(i))
+			}
+			depositAmount[o.ProgramHash] += val
 			depositFee[o.ProgramHash] += fee
 		}
 	}
-	log.Infof("depositAmount %v",depositAmount)
-	log.Infof("depositFee %v",depositFee)
+	log.Infof("depositAmount %v", depositAmount)
+	log.Infof("depositFee %v", depositFee)
 	for _, output := range txn.Outputs {
 		log.Infof("output %v ", output.ProgramHash)
 		amount, ok := depositAmount[output.ProgramHash]
@@ -2502,6 +2518,7 @@ func (b *BlockChain) checkReturnSideChainDepositTransaction(txn *Transaction) er
 		}
 		fee := depositFee[output.ProgramHash]
 		if output.Value+fee != amount {
+			log.Info("%v %v %v", output.Value, fee, amount)
 			return errors.New("invalid output amount")
 		}
 		delete(depositAmount, output.ProgramHash)
