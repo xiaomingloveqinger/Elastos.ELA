@@ -400,7 +400,6 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, m *msg.GetBlocks) {
 	// This mirrors the behavior in the reference implementation.
 	chain := sp.server.chain
 	hashList := chain.LocateBlocks(m.Locator, &m.HashStop, pact.MaxBlocksPerMsg)
-
 	// Generate inventory message.
 	invMsg := msg.NewInv()
 	for i := range hashList {

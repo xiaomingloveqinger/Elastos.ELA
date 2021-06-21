@@ -39,9 +39,17 @@ type Checkpoint struct {
 	committee *Committee
 }
 
-func (c *Checkpoint) OnBlockSaved(block *types.DposBlock) {
+func (c *Checkpoint) OnBlockSaved(block *types.DposBlock,needRollBack bool) {
 	if block.Height <= c.GetHeight() {
 		return
+	}
+	if needRollBack {
+		c.committee.firstHistory.RollbackSeekTo(block.Height)
+		c.committee.lastHistory.RollbackSeekTo(block.Height)
+		c.committee.appropriationHistory.RollbackSeekTo(block.Height)
+		c.committee.manager.history.RollbackSeekTo(block.Height)
+		c.committee.state.history.RollbackSeekTo(block.Height)
+		c.committee.state.manager.history.RollbackSeekTo(block.Height)
 	}
 	c.committee.ProcessBlock(block.Block, block.Confirm)
 }
@@ -153,6 +161,7 @@ func (c *Checkpoint) Serialize(w io.Writer) (err error) {
 }
 
 func (c *Checkpoint) Deserialize(r io.Reader) (err error) {
+
 	if c.height, err = common.ReadUint32(r); err != nil {
 		return
 	}
@@ -160,9 +169,11 @@ func (c *Checkpoint) Deserialize(r io.Reader) (err error) {
 	if err = c.KeyFrame.Deserialize(r); err != nil {
 		return
 	}
+
 	if err = c.StateKeyFrame.Deserialize(r); err != nil {
 		return
 	}
+
 	return c.ProposalKeyFrame.Deserialize(r)
 }
 

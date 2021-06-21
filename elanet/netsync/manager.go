@@ -473,6 +473,7 @@ func (sm *SyncManager) haveInventory(invVect *msg.InvVect) (bool, error) {
 		return sm.chain.HaveBlock(&invVect.Hash)
 
 	case msg.InvTypeConfirmedBlock:
+		log.Info("inv message", invVect.Hash.String())
 		// Ask blockMemPool and chain if the block with confirm is
 		// known to it in (blockMemPool, main chain)
 		if !sm.chain.BlockExists(&invVect.Hash) {
@@ -595,6 +596,11 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 					sm.syncStartTime = time.Now()
 				}
 				if sm.syncPeer == peer {
+					log.Info("handleInvMsg ")
+					for i:=0;i< len(locator);i++ {
+						log.Infof(" locator1 %s",locator[i].String())
+					}
+					log.Infof("orphanRoot %s", orphanRoot.String())
 					peer.PushGetBlocksMsg(locator, orphanRoot)
 				}
 				continue

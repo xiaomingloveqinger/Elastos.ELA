@@ -10,6 +10,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/elastos/Elastos.ELA/core/checkpoint"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -1189,7 +1190,6 @@ func (b *BlockChain) getReorganizeNodes(node *BlockNode) (*list.List, *list.List
 func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error {
 	// Clean the UTXO cache
 	b.UTXOCache.CleanCache()
-
 	// Ensure all of the needed side chain blocks are in the cache.
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(*BlockNode)
@@ -1198,7 +1198,6 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 				"chain block cache", n.Hash.Bytes())
 		}
 	}
-
 	// Disconnect blocks from the main chain.
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(*BlockNode)
@@ -1223,7 +1222,6 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 			return err
 		}
 	}
-
 	// Connect the new best chain blocks.
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(*BlockNode)
@@ -1235,7 +1233,9 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		if err != nil {
 			return err
 		}
-
+		if b.chainParams.CkpManager.GetRollBackStatus() == checkpoint.NoRollback {
+			b.chainParams.CkpManager.SetRollBackStatus(checkpoint.NeedRollback)
+		}
 		// update state after connected block
 		b.chainParams.CkpManager.OnBlockSaved(&DposBlock{
 			Block:       block,
@@ -1243,11 +1243,12 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 			Confirm:     confirm,
 		}, nil, b.state.ConsensusAlgorithm == state.POW)
 		DefaultLedger.Arbitrators.DumpInfo(block.Height)
-
+		if  b.chainParams.CkpManager.GetRollBackStatus() == checkpoint.NeedRollback {
+			b.chainParams.CkpManager.SetRollBackStatus(checkpoint.AlreadyRollback)
+		}
 		delete(b.blockCache, *n.Hash)
 		delete(b.confirmCache, *n.Hash)
 	}
-
 	return nil
 }
 
@@ -1400,7 +1401,6 @@ func (b *BlockChain) BlockExists(hash *Uint256) bool {
 	if uint32(len(b.Nodes)) <= height || !b.Nodes[height].Hash.IsEqual(*hash) {
 		return false
 	}
-
 	return true
 }
 
@@ -1524,7 +1524,6 @@ func (b *BlockChain) connectBestChain(node *BlockNode, block *Block, confirm *pa
 	//b.Index[*node.Hash] = node
 	node.Status = statusInvalidAncestor
 	b.index.AddNode(node, &block.Header)
-
 	// Connect the parent node to this node.
 	node.InMainChain = false
 	node.Parent.Children = append(node.Parent.Children, node)
@@ -1752,7 +1751,6 @@ func (b *BlockChain) BlockLocatorFromHash(inhash *Uint256) []*Uint256 {
 	//locator := make(Locator, 0, MaxBlockLocatorsPerMsg)
 	locator := make([]*Uint256, 0)
 	locator = append(locator, &hash)
-
 	// Nothing more to do if a locator for the genesis hash was requested.
 	if hash.IsEqual(b.GenesisHash) {
 		return locator
@@ -1777,6 +1775,7 @@ func (b *BlockChain) BlockLocatorFromHash(inhash *Uint256) []*Uint256 {
 	} else {
 		blockHeight = int32(node.Height)
 	}
+
 
 	// Generate the block locators according to the algorithm described in
 	// in the Locator comment and make sure to leave room for the
@@ -1835,6 +1834,7 @@ func (b *BlockChain) locateBlocks(startHash *Uint256, stopHash *Uint256, maxBloc
 			} else {
 				count = curHeight
 			}
+			log.Info(count)
 		} else {
 			startHeader, err := b.db.GetFFLDB().GetHeader(*startHash)
 			if err != nil {
@@ -1904,6 +1904,7 @@ func (b *BlockChain) locateBlocks(startHash *Uint256, stopHash *Uint256, maxBloc
 // This function is safe for concurrent access.
 func (b *BlockChain) LocateBlocks(locator []*Uint256, hashStop *Uint256, maxHashes uint32) []*Uint256 {
 	startHash := b.locateStartBlock(locator)
+	log.Info("starthash ",startHash.String())
 	blocks, err := b.locateBlocks(startHash, hashStop, maxHashes)
 	if err != nil {
 		log.Errorf("LocateBlocks error %s", err)

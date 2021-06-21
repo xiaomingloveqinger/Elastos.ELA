@@ -23,6 +23,7 @@ type crcArbiter struct {
 }
 
 func (c *crcArbiter) Serialize(w io.Writer) (err error) {
+
 	if err = c.crMember.Serialize(w); err != nil {
 		return
 	}

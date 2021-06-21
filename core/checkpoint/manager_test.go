@@ -114,7 +114,7 @@ func (*checkpoint) DataExtension() string {
 	return checkpointExtension
 }
 
-func (c *checkpoint) OnBlockSaved(block *types.DposBlock) {
+func (c *checkpoint) OnBlockSaved(block *types.DposBlock,needRollBack bool) {
 	data := uint64(block.Height)
 	c.data = &data
 }

@@ -19,9 +19,11 @@ type originArbiter struct {
 }
 
 func (o *originArbiter) Serialize(w io.Writer) error {
+
 	if err := o.ownerHash.Serialize(w); err != nil {
 		return err
 	}
+
 	return common.WriteVarBytes(w, o.key)
 }
 

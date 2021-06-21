@@ -106,6 +106,7 @@ func (c *fileChannels) saveCheckpoint(msg *fileMsg) (err error) {
 	defer file.Close()
 
 	buf := new(bytes.Buffer)
+
 	if err = msg.checkpoint.Serialize(buf); err != nil {
 		return
 	}

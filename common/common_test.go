@@ -34,7 +34,6 @@ func TestSortProgramHashes(t *testing.T) {
 
 	fmt.Println(hashes)
 	fmt.Println(dupHashes)
-
 }
 
 type byProgramHashes []Uint168

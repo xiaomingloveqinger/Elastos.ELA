@@ -65,9 +65,13 @@ func (c *CheckPoint) StartHeight() uint32 {
 			c.arbitrators.chainParams.PreConnectOffset)))
 }
 
-func (c *CheckPoint) OnBlockSaved(block *types.DposBlock) {
+func (c *CheckPoint) OnBlockSaved(block *types.DposBlock,needRollBack bool) {
 	if block.Height <= c.GetHeight() {
 		return
+	}
+	if needRollBack {
+		c.arbitrators.history.RollbackSeekTo(block.Height)
+		c.arbitrators.State.history.RollbackSeekTo(block.Height)
 	}
 	c.arbitrators.ProcessBlock(block.Block, block.Confirm)
 }
@@ -97,34 +101,17 @@ func (c *CheckPoint) Snapshot() checkpoint.ICheckPoint {
 	// init check point
 	c.initFromArbitrators(c.arbitrators)
 
-	point := &CheckPoint{
-		Height:             c.Height,
-		DutyIndex:          c.arbitrators.dutyIndex,
-		CurrentCandidates:  make([]ArbiterMember, 0),
-		NextArbitrators:    make([]ArbiterMember, 0),
-		NextCandidates:     make([]ArbiterMember, 0),
-		CurrentReward:      *NewRewardData(),
-		NextReward:         *NewRewardData(),
-		CurrentArbitrators: c.arbitrators.currentArbitrators,
-
-		CurrentCRCArbitersMap: make(map[common.Uint168]ArbiterMember),
-		NextCRCArbitersMap:    make(map[common.Uint168]ArbiterMember),
-		NextCRCArbiters:       make([]ArbiterMember, 0),
-		crcChangedHeight:      c.arbitrators.crcChangedHeight,
-		forceChanged:          c.arbitrators.forceChanged,
-
-		StateKeyFrame: *c.arbitrators.StateKeyFrame.snapshot(),
+	buf := new(bytes.Buffer)
+	if err := c.Serialize(buf); err != nil {
+		c.LogError(err)
+		return nil
 	}
-	point.CurrentArbitrators = copyByteList(c.arbitrators.currentArbitrators)
-	point.CurrentCandidates = copyByteList(c.arbitrators.currentCandidates)
-	point.NextArbitrators = copyByteList(c.arbitrators.nextArbitrators)
-	point.NextCandidates = copyByteList(c.arbitrators.nextCandidates)
-	point.CurrentReward = *copyReward(&c.arbitrators.CurrentReward)
-	point.NextReward = *copyReward(&c.arbitrators.NextReward)
-	point.NextCRCArbitersMap = copyCRCArbitersMap(c.NextCRCArbitersMap)
-	point.CurrentCRCArbitersMap = copyCRCArbitersMap(c.CurrentCRCArbitersMap)
-	point.NextCRCArbiters = copyByteList(c.NextCRCArbiters)
-	return point
+	result := &CheckPoint{}
+	if err := result.Deserialize(buf); err != nil {
+		c.LogError(err)
+		return nil
+	}
+	return result
 }
 
 func (c *CheckPoint) GetHeight() uint32 {
@@ -171,6 +158,7 @@ func (c *CheckPoint) LogError(err error) {
 
 // Serialize write data to writer
 func (c *CheckPoint) Serialize(w io.Writer) (err error) {
+
 	if err = common.WriteUint32(w, c.Height); err != nil {
 		return
 	}
@@ -202,6 +190,7 @@ func (c *CheckPoint) Serialize(w io.Writer) (err error) {
 	if err = c.NextReward.Serialize(w); err != nil {
 		return
 	}
+
 
 	if err = c.serializeCRCArbitersMap(w, c.CurrentCRCArbitersMap); err != nil {
 		return
@@ -334,9 +323,11 @@ func (c *CheckPoint) Deserialize(r io.Reader) (err error) {
 	if c.CurrentCRCArbitersMap, err = c.deserializeCRCArbitersMap(r); err != nil {
 		return
 	}
+
 	if c.NextCRCArbitersMap, err = c.deserializeCRCArbitersMap(r); err != nil {
 		return
 	}
+
 	if c.NextCRCArbiters, err = c.readArbiters(r); err != nil {
 		return
 	}
@@ -365,9 +356,11 @@ func (c *CheckPoint) Deserialize(r io.Reader) (err error) {
 	if err != nil {
 		return
 	}
+
 	if err = common.ReadElement(r, &c.forceChanged); err != nil {
 		return
 	}
+
 	return c.StateKeyFrame.Deserialize(r)
 }
 

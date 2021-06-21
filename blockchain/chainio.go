@@ -478,6 +478,7 @@ func (b *BlockChain) initChainState() error {
 			if err != nil {
 				return err
 			}
+			log.Info("sfa", header.Height, header.Hash().String())
 			curHash := header.Hash()
 			if lastNode == nil && !curHash.IsEqual(b.chainParams.GenesisBlock.Hash()) {
 				return fmt.Errorf("initChainState: Expected "+

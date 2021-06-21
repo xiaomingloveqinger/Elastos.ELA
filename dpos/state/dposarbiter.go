@@ -19,6 +19,7 @@ type dposArbiter struct {
 }
 
 func (d *dposArbiter) Serialize(w io.Writer) (err error) {
+
 	if err = d.producer.Serialize(w); err != nil {
 		return
 	}
