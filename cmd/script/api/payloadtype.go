@@ -1459,11 +1459,9 @@ func newCRCRegisterSideChainProposalHash(L *lua.LState) int {
 		OwnerPublicKey: publicKey,
 		DraftHash:      *draftHash,
 		SideChainInfo: payload.SideChainInfo{
-			SideChainName: sideChainName,
-			MagicNumber:   uint32(magicNumber),
-			DNSSeeds: []string{
-				dNSSeeds,
-			},
+			SideChainName:          sideChainName,
+			MagicNumber:            uint32(magicNumber),
+			DNSSeeds:               strings.Split(dNSSeeds, ","),
 			NodePort:               uint16(nodePort),
 			GenesisHash:            *genesisHash,
 			GenesisTimestamp:       uint32(genesisTimestamp),
