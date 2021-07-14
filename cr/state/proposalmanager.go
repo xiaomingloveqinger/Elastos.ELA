@@ -199,6 +199,7 @@ func (p *ProposalManager) updateProposals(height uint32,
 				}
 			}
 		case CRAgreed:
+			log.Info("updateProposals CRAgreed ", v.Proposal.SideChainName, v.Proposal.DraftHash)
 			if !inElectionPeriod {
 				p.abortProposal(v, height)
 				unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
@@ -206,11 +207,13 @@ func (p *ProposalManager) updateProposals(height uint32,
 				break
 			}
 			if p.shouldEndPublicVote(v.VoteStartHeight, height) {
+				log.Info("111")
 				if p.transferCRAgreedState(v, height, circulation) == VoterCanceled {
 					unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
 					recordCustomIDProposalResult(&results, proposalType, k, false)
 					continue
 				}
+				log.Info("222")
 				p.dealProposal(v, &unusedAmount, height)
 				recordCustomIDProposalResult(&results, proposalType, k, true)
 			}
@@ -369,6 +372,7 @@ func (p *ProposalManager) dealProposal(proposalState *ProposalState, unusedAmoun
 			p.ReceivedCustomIDLists = oriReceivedCustomIDLists
 		})
 	case payload.RegisterSideChain:
+		log.Info("333")
 		originRegisteredSideChainNames := p.RegisteredSideChainNames
 		originRegisteredSideChainPayloadInfo := p.RegisteredSideChainPayloadInfo
 		originExistedUpgradeProposalType := p.ExistedUpgradeProposalType
