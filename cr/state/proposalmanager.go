@@ -132,6 +132,10 @@ func (p *ProposalManager) getRegisteredSideChainByHeight(height uint32) map[comm
 	return p.RegisteredSideChainPayloadInfo[height]
 }
 
+func (p *ProposalManager) getAllRegisteredSideChain() map[uint32]map[common.Uint256]payload.SideChainInfo {
+	return p.RegisteredSideChainPayloadInfo
+}
+
 // getProposal will return a proposal with specified hash,
 // and return nil if not found.
 func (p *ProposalManager) getProposal(hash common.Uint256) *ProposalState {
@@ -207,7 +211,7 @@ func (p *ProposalManager) updateProposals(height uint32,
 				recordCustomIDProposalResult(&results, proposalType, k, false)
 				break
 			}
-			log.Info(v.VoteStartHeight,p.params.ProposalPublicVotingPeriod ,height)
+			log.Info(v.VoteStartHeight, p.params.ProposalPublicVotingPeriod, height)
 			if p.shouldEndPublicVote(v.VoteStartHeight, height) {
 				log.Info("111")
 				if p.transferCRAgreedState(v, height, circulation) == VoterCanceled {
@@ -380,6 +384,8 @@ func (p *ProposalManager) dealProposal(proposalState *ProposalState, unusedAmoun
 		originExistedUpgradeProposalType := p.ExistedUpgradeProposalType
 		p.history.Append(height, func() {
 			p.RegisteredSideChainNames = append(p.RegisteredSideChainNames, proposalState.Proposal.SideChainName)
+			log.Info("### ", height, proposalState.Proposal.SideChainName, proposalState.Proposal.SideChainInfo.DNSSeeds,
+				proposalState.Proposal.SideChainInfo.MagicNumber, proposalState.TxHash.String())
 			if info, ok := p.RegisteredSideChainPayloadInfo[height]; ok {
 				info[proposalState.TxHash] = proposalState.Proposal.SideChainInfo
 			} else {
