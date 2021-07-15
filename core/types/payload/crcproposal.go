@@ -1364,6 +1364,7 @@ func (p *CRCProposal) ToProposalInfo(payloadVersion byte) CRCProposalInfo {
 		SecretaryGeneralPublicKey: p.SecretaryGeneralPublicKey,
 		SecretaryGeneralDID:       p.SecretaryGeneralDID,
 		CRCouncilMemberDID:        p.CRCouncilMemberDID,
+		SideChainInfo:             p.SideChainInfo,
 		Hash:                      p.Hash(payloadVersion),
 	}
 

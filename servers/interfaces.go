@@ -1030,7 +1030,7 @@ func Getallregistertransactionsbyheight(param Params) map[string]interface{} {
 	crCommittee := Chain.GetCRCommittee()
 	rs := crCommittee.GetAllRegisteredSideChain()
 	var result []RsInfo
-	for _, v := range rs {
+	for k, v := range rs {
 		for k1, v1 := range v {
 			result = append(result, RsInfo{
 				SideChainName:          v1.SideChainName,
@@ -1042,6 +1042,7 @@ func Getallregistertransactionsbyheight(param Params) map[string]interface{} {
 				GenesisBlockDifficulty: v1.GenesisBlockDifficulty,
 				TxHash:                 common.ToReversedString(k1),
 				UpgradeProposalType:    v1.UpgradeProposalType,
+				Height:                 k,
 			})
 		}
 	}
@@ -1067,6 +1068,7 @@ func Getregistertransactionsbyheight(param Params) map[string]interface{} {
 			GenesisBlockDifficulty: v.GenesisBlockDifficulty,
 			TxHash:                 common.ToReversedString(k),
 			UpgradeProposalType:    v.UpgradeProposalType,
+			Height:                 height,
 		})
 	}
 	return ResponsePack(Success, result)

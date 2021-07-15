@@ -515,4 +515,5 @@ type RsInfo struct {
 	GenesisBlockDifficulty string   `json:"genesisblockdifficulty"`
 	TxHash                 string   `json:"txhash"`
 	UpgradeProposalType    uint16   `json:"upgradeproposaltype"`
+	Height                 uint32   `json:"height"`
 }
