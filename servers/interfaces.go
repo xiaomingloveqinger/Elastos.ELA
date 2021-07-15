@@ -1026,7 +1026,7 @@ func GetBalanceByAsset(param Params) map[string]interface{} {
 	return ResponsePack(Success, balance.String())
 }
 
-func Getallregistertransactionsbyheight(param Params) map[string]interface{} {
+func Getallregistertransactions(param Params) map[string]interface{} {
 	crCommittee := Chain.GetCRCommittee()
 	rs := crCommittee.GetAllRegisteredSideChain()
 	var result []RsInfo
