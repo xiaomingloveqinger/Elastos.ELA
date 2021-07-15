@@ -1041,10 +1041,10 @@ func Getregistertransactionsbyheight(param Params) map[string]interface{} {
 			MagicNumber:            v.MagicNumber,
 			DNSSeeds:               v.DNSSeeds,
 			NodePort:               v.NodePort,
-			GenesisHash:            v.GenesisHash,
+			GenesisHash:            common.ToReversedString(v.GenesisHash),
 			GenesisTimestamp:       v.GenesisTimestamp,
 			GenesisBlockDifficulty: v.GenesisBlockDifficulty,
-			TxHash:                 k,
+			TxHash:                 common.ToReversedString(k),
 			UpgradeProposalType:    v.UpgradeProposalType,
 		})
 	}
