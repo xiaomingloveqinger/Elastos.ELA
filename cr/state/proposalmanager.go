@@ -201,11 +201,13 @@ func (p *ProposalManager) updateProposals(height uint32,
 		case CRAgreed:
 			log.Info("updateProposals CRAgreed ", v.Proposal.SideChainName, v.Proposal.DraftHash)
 			if !inElectionPeriod {
+				log.Info(11111)
 				p.abortProposal(v, height)
 				unusedAmount += getProposalTotalBudgetAmount(v.Proposal)
 				recordCustomIDProposalResult(&results, proposalType, k, false)
 				break
 			}
+			log.Info(v.VoteStartHeight,p.params.ProposalPublicVotingPeriod ,height)
 			if p.shouldEndPublicVote(v.VoteStartHeight, height) {
 				log.Info("111")
 				if p.transferCRAgreedState(v, height, circulation) == VoterCanceled {
